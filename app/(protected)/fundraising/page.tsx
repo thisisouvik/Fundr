@@ -53,7 +53,7 @@ async function createDraftCampaign(formData: FormData) {
   const [{ data: profile }, { data: kyc }]: any = await Promise.all([
     supabase
       .from("profiles")
-      .select("role")
+      .select("role, wallet_address")
       .eq("id", user.id)
       .maybeSingle(),
     supabase

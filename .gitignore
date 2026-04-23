@@ -41,3 +41,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# contracts (Rust/Soroban)
+/contracts/target/
+/contracts/**/*.wasm
+/contracts/**/*.wasm.d
+
+# Playwright E2E
+/playwright-report/
+/test-results/
+/.playwright-tmp/
