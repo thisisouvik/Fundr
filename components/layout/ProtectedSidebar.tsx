@@ -15,6 +15,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Home", href: "/dashboard" },
   { label: "Create Campaign", href: "/fundraising" },
+  { label: "Campaign Performance", href: "/dashboard/performance" },
   { label: "Fundraised History", href: "/history" },
   { label: "Profile and Settings", href: "/settings" },
 ];
@@ -35,10 +36,11 @@ export function ProtectedSidebar() {
     }
 
     return [
-      ...navItems,
+      { label: "Home", href: "/dashboard" },
       { label: "Admin Panel", href: "/admin" },
       { label: "KYC Review", href: "/admin/kyc" },
       { label: "Campaign Moderation", href: "/admin/campaigns" },
+      { label: "Settings", href: "/settings" },
     ];
   }, [isAdmin]);
 
@@ -81,7 +83,7 @@ export function ProtectedSidebar() {
       setIsAdmin(profile?.role === "admin");
 
       if (profile?.is_verified && (profile.role === "creator" || profile.role === "admin")) {
-        setStatusLabel("Creator access active");
+        setStatusLabel(profile.role === "admin" ? "Admin access active" : "Creator access active");
         setStatusTone("success");
         setHasCreatorAccess(true);
       } else if (kyc?.status === "pending") {
@@ -133,9 +135,9 @@ export function ProtectedSidebar() {
         <Link href="/dashboard" className="text-2xl font-bold tracking-tight text-[var(--brand)]">
           Fundr
         </Link>
-        <p className="mt-1 text-sm text-[var(--muted)]">Creator workspace</p>
+        <p className="mt-1 text-sm text-[var(--muted)]">{isAdmin ? "Admin workspace" : "Creator workspace"}</p>
         <Link
-          href="/settings"
+          href={isAdmin ? "/admin" : "/settings"}
           className={`mt-3 block rounded-xl border px-3 py-2 text-xs font-semibold ${statusClassName}`}
         >
           {isStatusLoading ? "KYC: checking status..." : statusLabel}
@@ -145,14 +147,34 @@ export function ProtectedSidebar() {
       <nav aria-label="Protected navigation" className="space-y-2">
         {links.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const isCreateCampaign = item.href === "/fundraising";
-          const isCreateLocked = isCreateCampaign && !hasCreatorAccess;
+          const kycLockedRoutes = ["/fundraising", "/dashboard/performance", "/history"];
+          const isKycLockedRoute = kycLockedRoutes.includes(item.href);
+          const isKycLocked = isKycLockedRoute && !hasCreatorAccess;
           const baseClass = isActive
             ? "border border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]"
             : "border border-transparent hover:border-[var(--line)] hover:bg-[var(--surface-soft)]";
-          const lockClass = isCreateLocked
+          const lockClass = isKycLocked
             ? " text-[var(--muted)] opacity-85"
             : "";
+
+          if (isKycLocked) {
+            return (
+              <button
+                type="button"
+                key={item.href}
+                disabled
+                aria-disabled="true"
+                className={`block w-full cursor-not-allowed rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${baseClass}${lockClass}`}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <span>{item.label}</span>
+                  <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+                    Locked
+                  </span>
+                </span>
+              </button>
+            );
+          }
 
           return (
             <Link
@@ -162,11 +184,6 @@ export function ProtectedSidebar() {
             >
               <span className="inline-flex items-center gap-2">
                 <span>{item.label}</span>
-                {isCreateLocked ? (
-                  <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
-                    Locked
-                  </span>
-                ) : null}
               </span>
             </Link>
           );

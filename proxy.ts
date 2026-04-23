@@ -10,6 +10,7 @@ export async function proxy(request: NextRequest) {
 
   const isProtected = protectedRoutes.some((route) => path.startsWith(route));
   const isAuthRoute = authRoutes.some((route) => path.startsWith(route));
+  const isAdminRoute = path.startsWith("/admin");
 
   if (isProtected && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -17,6 +18,18 @@ export async function proxy(request: NextRequest) {
 
   if (isAuthRoute && user) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (isAdminRoute) {
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    const configuredAdminEmail = (process.env.ADMIN_PANEL_EMAIL || "").trim().toLowerCase();
+    const userEmail = (user.email || "").trim().toLowerCase();
+    if (!configuredAdminEmail || configuredAdminEmail !== userEmail) {
+      return NextResponse.redirect(new URL("/dashboard?admin_error=denied", request.url));
+    }
   }
 
   if (path.startsWith("/onboarding") && !user) {
@@ -32,6 +45,7 @@ export const config = {
     "/settings/:path*",
     "/fundraising/:path*",
     "/history/:path*",
+    "/admin/:path*",
     "/login",
     "/register",
     "/forgot-password",
