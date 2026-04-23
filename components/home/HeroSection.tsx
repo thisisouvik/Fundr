@@ -1,8 +1,16 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { heroConfig } from "@/lib/constants/home";
 
 export function HeroSection() {
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const isCreatorUser = Boolean(user) && (profile?.role === "creator" || profile?.role === "admin");
+
   return (
     <section className="grid-soft relative overflow-hidden border-b border-[var(--line)]">
       <div className="mx-auto w-full max-w-6xl px-4 py-16 md:px-8 md:py-20">
@@ -33,10 +41,10 @@ export function HeroSection() {
                 Fund
               </Link>
               <Link
-                href="/fundraising"
+                href={isCreatorUser ? "/dashboard" : "/fundraising"}
                 className="rounded-full border border-[var(--brand)] px-5 py-3 text-sm font-semibold text-[var(--brand)] transition hover:bg-[var(--brand)] hover:text-white"
               >
-                Start a Campaign
+                {isCreatorUser ? "Dashboard" : "Start a Campaign"}
               </Link>
             </div>
           </div>

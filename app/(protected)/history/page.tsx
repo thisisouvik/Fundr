@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireCreatorAccess } from "@/lib/auth/creator";
 
 function formatXlm(amount: number) {
   return `${amount.toLocaleString(undefined, {
@@ -17,21 +16,14 @@ function formatDate(value: string) {
 }
 
 export default async function HistoryPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user }: any = await requireCreatorAccess();
 
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: campaigns } = await supabase
+  const { data: campaigns }: any = await supabase
     .from("campaigns")
     .select("id, title")
     .eq("creator_id", user.id);
 
-  const campaignIds = (campaigns ?? []).map((campaign) => campaign.id);
+  const campaignIds = (campaigns ?? []).map((campaign: any) => campaign.id);
 
   const { data: contributions } = campaignIds.length
     ? await supabase
@@ -50,9 +42,11 @@ export default async function HistoryPage() {
         }>,
       };
 
-  const titleById = new Map((campaigns ?? []).map((campaign) => [campaign.id, campaign.title]));
+  const titleById = new Map<string, string>(
+    (campaigns ?? []).map((campaign: any) => [campaign.id as string, campaign.title as string]),
+  );
 
-  const totalRaised = (contributions ?? []).reduce((sum, item) => {
+  const totalRaised = (contributions ?? []).reduce((sum: number, item: any) => {
     return sum + Number(item.amount_xlm ?? 0);
   }, 0);
 
@@ -89,7 +83,7 @@ export default async function HistoryPage() {
           </thead>
           <tbody>
             {(contributions ?? []).length ? (
-              (contributions ?? []).map((item) => (
+              (contributions ?? []).map((item: any) => (
                 <tr key={item.tx_hash} className="border-b border-[var(--line)] last:border-b-0">
                   <td className="px-4 py-3">{formatDate(item.created_at)}</td>
                   <td className="px-4 py-3">{titleById.get(item.campaign_id) ?? "Untitled"}</td>

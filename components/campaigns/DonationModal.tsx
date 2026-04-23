@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { WalletButton } from "@/components/wallet/WalletButton";
 import { DonationReceipt } from "@/components/campaigns/DonationReceipt";
 import type { CampaignRow } from "@/types/supabase";
 
@@ -12,7 +10,6 @@ interface DonationModalProps {
 }
 
 export function DonationModal({ campaign, onClose }: DonationModalProps) {
-  const router = useRouter();
   const [step, setStep] = useState<"choice" | "form" | "confirm" | "success">("choice");
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [amount, setAmount] = useState("1");
@@ -59,7 +56,7 @@ export function DonationModal({ campaign, onClose }: DonationModalProps) {
       const mockTxHash = `${Math.random().toString(16).slice(2)}_${Date.now()}`;
       setTxHash(mockTxHash);
       setStep("success");
-    } catch (error) {
+    } catch {
       alert("Donation failed. Please try again.");
       setIsSubmitting(false);
     }
@@ -89,7 +86,7 @@ export function DonationModal({ campaign, onClose }: DonationModalProps) {
                 className="w-full rounded-xl border-2 border-[var(--brand)] bg-[var(--brand)]/10 py-4 text-left transition hover:bg-[var(--brand)]/20"
               >
                 <p className="font-semibold">Donate Anonymously</p>
-                <p className="mt-1 text-xs text-[var(--muted)]">Your name won't be shown to the campaign creator</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">Your name won&apos;t be shown to the campaign creator</p>
               </button>
 
               <button

@@ -76,39 +76,27 @@ export default async function DashboardPage() {
     goal: formatXlm(Number(campaign.goal_xlm ?? 0)),
   }));
 
-  const roleLabel = profile?.role ? `${profile.role} account` : "creator account";
+  const isAdminPanelView = isDedicatedAdmin || profile?.role === "admin";
+  const dashboardLabel = isAdminPanelView ? "Admin Dashboard" : "Creator Dashboard";
+  const dashboardSubtitle = isAdminPanelView
+    ? "Track platform activity and review campaign and fundraiser health from your admin account."
+    : "Track campaign performance and manage fundraising activity from your account.";
 
   return (
     <div className="space-y-8">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold">Creator Dashboard</h1>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Track campaign performance and manage fundraising activity from your {roleLabel}.
-          </p>
+          <h1 className="text-4xl font-bold">{dashboardLabel}</h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">{dashboardSubtitle}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {!isAdminPanelView ? (
           <Link
-            href="/fundraising"
-            className="rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--brand-strong)]"
-          >
-            Create Campaign
-          </Link>
-          {isDedicatedAdmin ? (
-            <Link
-              href="/admin"
-              className="rounded-full border border-[var(--brand)] px-4 py-2 text-sm font-semibold text-[var(--brand)] transition hover:bg-[var(--brand)] hover:text-white"
-            >
-              Admin Panel
-            </Link>
-          ) : null}
-          <Link
-            href="/settings"
+            href="/dashboard/performance"
             className="rounded-full border border-[var(--brand)] px-4 py-2 text-sm font-semibold text-[var(--brand)] transition hover:bg-[var(--brand)] hover:text-white"
           >
-            Profile and Settings
+            Campaign Performance
           </Link>
-        </div>
+        ) : null}
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -133,12 +121,6 @@ export default async function DashboardPage() {
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl font-bold">Your Campaigns</h2>
-          <Link
-            href="/fundraising"
-            className="rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
-          >
-            + New Campaign
-          </Link>
         </div>
 
         {campaignRows.length ? (
@@ -147,14 +129,8 @@ export default async function DashboardPage() {
           <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-6 text-center">
             <p className="text-base font-semibold">No campaigns created yet</p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Start your first fundraiser by creating a campaign draft.
+              Start your first campaign by creating a draft from the sidebar.
             </p>
-            <Link
-              href="/fundraising"
-              className="mt-4 inline-flex rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--brand-strong)]"
-            >
-              Create Your First Campaign
-            </Link>
           </div>
         )}
       </section>

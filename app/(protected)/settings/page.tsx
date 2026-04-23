@@ -386,7 +386,8 @@ export default async function SettingsPage({
             error === "kyc_file_missing" ||
             error === "kyc_file_type" ||
             error === "kyc_file_size" ||
-            error === "kyc_upload" ? (
+            error === "kyc_upload" ||
+            error === "kyc_required" ? (
               <p className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-600">
                 {error === "save"
                   ? "KYC submission failed. Please try again."
@@ -398,6 +399,8 @@ export default async function SettingsPage({
                         ? "KYC image is too large. Maximum size is 5 MB."
                         : error === "kyc_upload"
                           ? "Upload failed. Please try again."
+                    : error === "kyc_required"
+                      ? "Complete your KYC to unlock creator-only pages."
                           : "Please provide valid KYC values."}
               </p>
             ) : null}

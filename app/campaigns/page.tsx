@@ -13,6 +13,7 @@ export default async function CampaignsPage({
   const search = typeof params.search === "string" ? params.search : "";
 
   const supabase = await createClient();
+  const now = new Date();
 
   let query = supabase
     .from("campaigns")
@@ -49,9 +50,10 @@ export default async function CampaignsPage({
   }
 
   const { data: campaigns = [], count = 0, error } = await query.limit(20);
+  const activeCampaigns = campaigns ?? [];
 
   // Fetch contributions for progress calculation
-  const campaignIds = campaigns.map((c) => c.id);
+  const campaignIds = activeCampaigns.map((c) => c.id);
   const { data: contributions = [] } = campaignIds.length
     ? await supabase
         .from("contributions")
@@ -59,8 +61,9 @@ export default async function CampaignsPage({
         .in("campaign_id", campaignIds)
         .eq("status", "confirmed")
     : { data: [] };
+  const confirmedContributions = contributions ?? [];
 
-  const raisedByCampaign = contributions.reduce<Record<string, number>>((acc, c) => {
+  const raisedByCampaign = confirmedContributions.reduce<Record<string, number>>((acc, c) => {
     acc[c.campaign_id] = (acc[c.campaign_id] ?? 0) + Number(c.amount_xlm);
     return acc;
   }, {});
@@ -146,18 +149,18 @@ export default async function CampaignsPage({
             <p className="font-semibold">Error loading campaigns</p>
             <p className="mt-1 text-sm">{error.message}</p>
           </div>
-        ) : campaigns.length === 0 ? (
+        ) : activeCampaigns.length === 0 ? (
           <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-12 text-center">
             <p className="text-lg font-semibold">No campaigns found</p>
             <p className="mt-2 text-sm text-[var(--muted)]">Try adjusting your filters or search query.</p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {campaigns.map((campaign) => {
+            {activeCampaigns.map((campaign) => {
               const raised = raisedByCampaign[campaign.id] ?? 0;
               const progress = Math.min((raised / Number(campaign.goal_xlm)) * 100, 100);
               const daysLeft = Math.ceil(
-                (new Date(campaign.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                (new Date(campaign.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
               );
 
               return (
@@ -220,7 +223,7 @@ export default async function CampaignsPage({
 
         {/* Pagination or results count */}
         <div className="mt-8 text-center text-sm text-[var(--muted)]">
-          Showing {campaigns.length} of {count} campaigns
+          Showing {activeCampaigns.length} of {count} campaigns
         </div>
       </div>
     </div>

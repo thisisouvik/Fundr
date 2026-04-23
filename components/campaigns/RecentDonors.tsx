@@ -14,8 +14,9 @@ export async function RecentDonors({ campaignId }: RecentDonorsProps) {
     .eq("status", "confirmed")
     .order("created_at", { ascending: false })
     .limit(5);
+  const recentDonors = donors ?? [];
 
-  if (donors.length === 0) {
+  if (recentDonors.length === 0) {
     return (
       <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
         <h3 className="text-lg font-bold">Recent Supporters</h3>
@@ -27,10 +28,10 @@ export async function RecentDonors({ campaignId }: RecentDonorsProps) {
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
       <h3 className="text-lg font-bold">Recent Supporters</h3>
-      <p className="mt-1 text-xs text-[var(--muted)]">Last {donors.length} donors</p>
+      <p className="mt-1 text-xs text-[var(--muted)]">Last {recentDonors.length} donors</p>
 
       <div className="mt-4 space-y-3">
-        {donors.map((donor, idx) => (
+        {recentDonors.map((donor, idx) => (
           <div key={idx} className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-[var(--brand-soft)]" />

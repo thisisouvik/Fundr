@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import { WalletButton } from "@/components/wallet/WalletButton";
 import { DonationModal } from "@/components/campaigns/DonationModal";
 import type { CampaignRow } from "@/types/supabase";
 

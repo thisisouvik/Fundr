@@ -14,6 +14,7 @@ export default async function CampaignDetailPage({
 }) {
   const { slug } = await params;
   const supabase = await createClient();
+  const now = new Date();
 
   // Fetch campaign
   const { data: campaign, error: campaignError } = await supabase
@@ -25,6 +26,11 @@ export default async function CampaignDetailPage({
   if (campaignError || !campaign) {
     redirect("/campaigns");
   }
+
+  await supabase
+    .from("campaigns")
+    .update({ views_count: Number(campaign.views_count ?? 0) + 1 })
+    .eq("id", campaign.id);
 
   // Fetch creator profile
   const { data: creator } = await supabase
@@ -40,11 +46,15 @@ export default async function CampaignDetailPage({
     .eq("campaign_id", campaign.id)
     .eq("status", "confirmed");
 
-  const raised = contributions.reduce((sum, c) => sum + Number(c.amount_xlm), 0);
-  const uniqueBackers = new Set(contributions.map((c) => c.wallet_address)).size;
+  const confirmedContributions = contributions ?? [];
+  const raised = confirmedContributions.reduce(
+    (sum, c) => sum + Number(c.amount_xlm),
+    0,
+  );
+  const uniqueBackers = new Set(confirmedContributions.map((c) => c.wallet_address)).size;
   const progress = (raised / Number(campaign.goal_xlm)) * 100;
   const daysLeft = Math.ceil(
-    (new Date(campaign.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    (new Date(campaign.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
   );
 
   return (

@@ -7,10 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase: any = createClient();
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +34,6 @@ export default function OnboardingPage() {
       .update({
         username: username || null,
         full_name: fullName || null,
-        wallet_address: walletAddress || null,
       })
       .eq("id", user.id);
 
@@ -52,7 +50,7 @@ export default function OnboardingPage() {
   return (
     <AuthCard
       title="Complete your profile"
-      subtitle="Set your creator identity and optionally link your wallet address."
+      subtitle="Set your creator identity to finish onboarding."
     >
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block space-y-2">
@@ -73,17 +71,6 @@ export default function OnboardingPage() {
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
             placeholder="Your Name"
-            className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-sm outline-none"
-          />
-        </label>
-
-        <label className="block space-y-2">
-          <span className="text-sm font-medium">Freighter Wallet Address (optional)</span>
-          <input
-            type="text"
-            value={walletAddress}
-            onChange={(event) => setWalletAddress(event.target.value)}
-            placeholder="G..."
             className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-sm outline-none"
           />
         </label>

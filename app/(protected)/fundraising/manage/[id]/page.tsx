@@ -2,7 +2,7 @@ import Image from "next/image";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireCampaignOwnerAccess } from "@/lib/auth/creator";
 
 const CAMPAIGN_MEDIA_BUCKET = "campaign-media";
 const CAMPAIGN_PROOF_BUCKET = "campaign-proofs";
@@ -40,38 +40,8 @@ function extractMediaPathFromPublicUrl(publicUrl: string) {
 }
 
 async function getAuthorizedCampaignContext(campaignId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const [{ data: profile }, { data: campaign }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("campaigns")
-      .select("id, creator_id, title, image_url, gallery_urls, proof_document_url")
-      .eq("id", campaignId)
-      .maybeSingle(),
-  ]);
-
-  if (!campaign) {
-    redirect("/dashboard");
-  }
-
-  const isAdmin = profile?.role === "admin";
+  const { supabase, user, campaign, isAdmin } = await requireCampaignOwnerAccess(campaignId);
   const isOwner = campaign.creator_id === user.id;
-
-  if (!isAdmin && !isOwner) {
-    redirect("/dashboard");
-  }
 
   return { supabase, user, campaign, isAdmin, isOwner };
 }
@@ -96,9 +66,9 @@ async function updateCampaignBasics(formData: FormData) {
     redirect(`/fundraising/manage/${campaignId}?error=official_link`);
   }
 
-  const { supabase } = await getAuthorizedCampaignContext(campaignId);
+  const { supabase }: any = await getAuthorizedCampaignContext(campaignId);
 
-  const { error } = await supabase
+  const { error }: any = await supabase
     .from("campaigns")
     .update({
       title,
@@ -137,7 +107,7 @@ async function uploadCampaignMedia(formData: FormData) {
     redirect(`/fundraising/manage/${campaignId}?error=new_images_missing`);
   }
 
-  const { supabase, campaign } = await getAuthorizedCampaignContext(campaignId);
+  const { supabase, campaign }: any = await getAuthorizedCampaignContext(campaignId);
 
   const currentImages = [campaign.image_url, ...(campaign.gallery_urls ?? [])].filter(
     (url): url is string => Boolean(url),
@@ -189,7 +159,7 @@ async function uploadCampaignMedia(formData: FormData) {
     ? [...existingGallery, ...uploadedUrls]
     : [...existingGallery, ...uploadedUrls.slice(1)];
 
-  const { error: updateError } = await supabase
+  const { error: updateError }: any = await supabase
     .from("campaigns")
     .update({ image_url: imageUrl, gallery_urls: newGallery })
     .eq("id", campaignId);
@@ -214,7 +184,7 @@ async function removeGalleryImage(formData: FormData) {
     redirect(`/fundraising/manage/${campaignId}?error=invalid`);
   }
 
-  const { supabase, campaign } = await getAuthorizedCampaignContext(campaignId);
+  const { supabase, campaign }: any = await getAuthorizedCampaignContext(campaignId);
 
   const images = [campaign.image_url, ...(campaign.gallery_urls ?? [])].filter(
     (url): url is string => Boolean(url),
@@ -232,7 +202,7 @@ async function removeGalleryImage(formData: FormData) {
   const nextCover = filteredImages[0] || null;
   const nextGallery = filteredImages.slice(1);
 
-  const { error } = await supabase
+  const { error }: any = await supabase
     .from("campaigns")
     .update({ image_url: nextCover, gallery_urls: nextGallery })
     .eq("id", campaignId);
@@ -273,7 +243,7 @@ async function replaceProofFile(formData: FormData) {
     redirect(`/fundraising/manage/${campaignId}?error=proof_size`);
   }
 
-  const { supabase, campaign } = await getAuthorizedCampaignContext(campaignId);
+  const { supabase, campaign }: any = await getAuthorizedCampaignContext(campaignId);
 
   const safeName = sanitizeFileName(file.name || "proof");
   const path = `${campaign.creator_id}/${campaignId}/proof-${Date.now()}-${safeName}`;
@@ -289,7 +259,7 @@ async function replaceProofFile(formData: FormData) {
   }
 
   const previousProofPath = campaign.proof_document_url;
-  const { error: updateError } = await supabase
+  const { error: updateError }: any = await supabase
     .from("campaigns")
     .update({ proof_document_url: path })
     .eq("id", campaignId);
@@ -315,14 +285,14 @@ async function removeProofFile(formData: FormData) {
     redirect("/dashboard");
   }
 
-  const { supabase, campaign } = await getAuthorizedCampaignContext(campaignId);
+  const { supabase, campaign }: any = await getAuthorizedCampaignContext(campaignId);
 
   if (!campaign.proof_document_url) {
     redirect(`/fundraising/manage/${campaignId}`);
   }
 
   const currentProofPath = campaign.proof_document_url;
-  const { error } = await supabase
+  const { error }: any = await supabase
     .from("campaigns")
     .update({ proof_document_url: null })
     .eq("id", campaignId);
@@ -345,7 +315,7 @@ async function deleteCampaign(formData: FormData) {
     redirect("/dashboard");
   }
 
-  const { supabase, campaign } = await getAuthorizedCampaignContext(campaignId);
+  const { supabase, campaign }: any = await getAuthorizedCampaignContext(campaignId);
 
   const mediaUrls = [campaign.image_url, ...(campaign.gallery_urls ?? [])].filter(
     (url): url is string => Boolean(url),
@@ -356,7 +326,7 @@ async function deleteCampaign(formData: FormData) {
 
   const proofPath = campaign.proof_document_url;
 
-  const { error } = await supabase.from("campaigns").delete().eq("id", campaignId);
+  const { error }: any = await supabase.from("campaigns").delete().eq("id", campaignId);
   if (error) {
     redirect(`/fundraising/manage/${campaignId}?error=delete`);
   }
@@ -387,9 +357,9 @@ export default async function ManageCampaignPage({
   const error = typeof query.error === "string" ? query.error : "";
   const saved = typeof query.saved === "string" ? query.saved : "";
 
-  const { supabase, campaign } = await getAuthorizedCampaignContext(id);
+  const { supabase, campaign }: any = await getAuthorizedCampaignContext(id);
 
-  const { data: campaignFull } = await supabase
+  const { data: campaignFull }: any = await supabase
     .from("campaigns")
     .select(
       "id, title, short_description, description, category, goal_xlm, deadline, status, image_url, gallery_urls, official_link, proof_document_url, created_at",
@@ -403,7 +373,7 @@ export default async function ManageCampaignPage({
 
   let proofPreviewUrl: string | null = null;
   if (campaignFull.proof_document_url) {
-    const { data } = await supabase
+    const { data }: any = await supabase
       .storage
       .from(CAMPAIGN_PROOF_BUCKET)
       .createSignedUrl(campaignFull.proof_document_url, 60 * 30);

@@ -3,12 +3,19 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+interface CampaignComment {
+  id: string;
+  content: string;
+  author_id: string | null;
+  created_at: string;
+}
+
 interface CommentsSection {
   campaignId: string;
 }
 
 export function CommentsSection({ campaignId }: CommentsSection) {
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<CampaignComment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +59,7 @@ export function CommentsSection({ campaignId }: CommentsSection) {
         .single();
 
       if (newCommentData) {
-        setComments([newCommentData, ...comments]);
+        setComments((previous) => [newCommentData as CampaignComment, ...previous]);
         setNewComment("");
       }
     } catch (error) {

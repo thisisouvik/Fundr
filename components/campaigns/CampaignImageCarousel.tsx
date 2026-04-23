@@ -29,10 +29,6 @@ export function CampaignImageCarousel({ title, imageUrl, galleryUrls }: Campaign
     return () => window.clearInterval(interval);
   }, [images.length]);
 
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [images]);
-
   const goToPrevious = () => {
     if (images.length <= 1) return;
     setActiveIndex((current) => (current - 1 + images.length) % images.length);
@@ -52,7 +48,7 @@ export function CampaignImageCarousel({ title, imageUrl, galleryUrls }: Campaign
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+    <div key={images.join("|")} className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
       <div className="relative h-[28rem] w-full">
         {images.map((src, index) => {
           const isActive = index === activeIndex;

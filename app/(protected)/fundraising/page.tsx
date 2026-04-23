@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createCampaignOnChain } from "@/lib/stellar/factory";
 
 const CAMPAIGN_MEDIA_BUCKET = "campaign-media";
 const CAMPAIGN_PROOF_BUCKET = "campaign-proofs";
@@ -40,7 +41,7 @@ async function cleanupUploadedFiles(
 async function createDraftCampaign(formData: FormData) {
   "use server";
 
-  const supabase = await createClient();
+  const supabase: any = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -49,7 +50,7 @@ async function createDraftCampaign(formData: FormData) {
     redirect("/login");
   }
 
-  const [{ data: profile }, { data: kyc }] = await Promise.all([
+  const [{ data: profile }, { data: kyc }]: any = await Promise.all([
     supabase
       .from("profiles")
       .select("role")
@@ -68,6 +69,12 @@ async function createDraftCampaign(formData: FormData) {
 
   if (!isCreator || (!isAdmin && !hasApprovedKyc)) {
     redirect("/dashboard");
+  }
+
+  // wallet_address is required for the Soroban `creator.require_auth()` call
+  const creatorWallet: string | null = profile?.wallet_address ?? null;
+  if (!creatorWallet) {
+    redirect("/fundraising?error=no_wallet");
   }
 
   const title = String(formData.get("title") ?? "").trim();
@@ -162,10 +169,27 @@ async function createDraftCampaign(formData: FormData) {
     proofDocumentPath = objectPath;
   }
 
-  const { error } = await supabase.from("campaigns").insert({
+  const deadlineIso = new Date(`${deadline}T23:59:59.000Z`).toISOString();
+
+  let onChain;
+  try {
+    onChain = await createCampaignOnChain({
+      creatorWallet: creatorWallet!,
+      goalXlm: goal,
+      deadlineIso,
+      title,
+    });
+  } catch (err) {
+    console.error("[Fundr] on-chain campaign creation failed:", err);
+    await cleanupUploadedFiles(supabase, uploadedImagePaths, proofDocumentPath);
+    redirect("/fundraising?error=onchain");
+  }
+
+  const { error }: any = await supabase.from("campaigns").insert({
     id: campaignId,
     creator_id: user.id,
-    contract_address: `draft-${crypto.randomUUID()}`,
+    contract_address: onChain!.contractAddress,
+    factory_tx_hash: onChain!.factoryTxHash,
     title,
     short_description: shortDescription,
     description,
@@ -175,7 +199,7 @@ async function createDraftCampaign(formData: FormData) {
     official_link: officialCampaignLink || null,
     proof_document_url: proofDocumentPath,
     goal_xlm: goal,
-    deadline: new Date(`${deadline}T23:59:59.000Z`).toISOString(),
+    deadline: deadlineIso,
     status: "draft",
   });
 
@@ -197,7 +221,7 @@ export default async function FundraisingPage({
   const params = await searchParams;
   const error = typeof params.error === "string" ? params.error : "";
 
-  const supabase = await createClient();
+  const supabase: any = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -206,7 +230,7 @@ export default async function FundraisingPage({
     redirect("/login");
   }
 
-  const [{ data: profile }, { data: kyc }] = await Promise.all([
+  const [{ data: profile }, { data: kyc }]: any = await Promise.all([
     supabase
       .from("profiles")
       .select("role")
@@ -373,23 +397,27 @@ export default async function FundraisingPage({
               <p className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-600">
                 {error === "save"
                   ? "Could not save campaign. Please try again."
-                  : error === "official_link"
-                    ? "Official campaign link must start with http:// or https://"
-                    : error === "images_count"
-                      ? "Upload 4 to 5 campaign images."
-                      : error === "images_type"
-                        ? "Campaign images must be image files."
-                        : error === "images_size"
-                          ? "Each campaign image must be 4 MB or smaller."
-                          : error === "images_upload"
-                            ? "Campaign image upload failed. Please try again."
-                            : error === "proof_type"
-                              ? "Proof file must be an image or a PDF file."
-                              : error === "proof_size"
-                                ? "Proof file must be 6 MB or smaller."
-                                : error === "proof_upload"
-                                  ? "Proof file upload failed. Please try again."
-                                  : "Please complete all required fields correctly."}
+                  : error === "no_wallet"
+                    ? "You must link a Stellar wallet in your profile before creating a campaign."
+                    : error === "onchain"
+                      ? "On-chain registration failed. Check that your wallet is funded on Testnet and try again."
+                      : error === "official_link"
+                        ? "Official campaign link must start with http:// or https://"
+                        : error === "images_count"
+                          ? "Upload 4 to 5 campaign images."
+                          : error === "images_type"
+                            ? "Campaign images must be image files."
+                            : error === "images_size"
+                              ? "Each campaign image must be 4 MB or smaller."
+                              : error === "images_upload"
+                                ? "Campaign image upload failed. Please try again."
+                                : error === "proof_type"
+                                  ? "Proof file must be an image or a PDF file."
+                                  : error === "proof_size"
+                                    ? "Proof file must be 6 MB or smaller."
+                                    : error === "proof_upload"
+                                      ? "Proof file upload failed. Please try again."
+                                      : "Please complete all required fields correctly."}
               </p>
             ) : null}
 
