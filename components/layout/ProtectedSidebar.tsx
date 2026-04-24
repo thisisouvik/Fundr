@@ -36,7 +36,6 @@ export function ProtectedSidebar() {
     }
 
     return [
-      { label: "Home", href: "/dashboard" },
       { label: "Admin Panel", href: "/admin" },
       { label: "KYC Review", href: "/admin/kyc" },
       { label: "Campaign Moderation", href: "/admin/campaigns" },
