@@ -117,12 +117,12 @@ export function ProtectedSidebar() {
 
   const statusClassName =
     statusTone === "success"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "text-emerald-700 bg-emerald-50/50"
       : statusTone === "info"
-        ? "border-sky-200 bg-sky-50 text-sky-700"
+        ? "text-sky-700 bg-sky-50/50"
         : statusTone === "danger"
-          ? "border-red-200 bg-red-50 text-red-700"
-          : "border-[var(--line)] bg-[var(--surface-soft)] text-[var(--muted)]";
+          ? "text-red-700 bg-red-50/50"
+          : "text-[var(--muted)] bg-[var(--surface-soft)]";
 
   const handleSignOut = async () => {
     await signOut();
@@ -134,13 +134,13 @@ export function ProtectedSidebar() {
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
       <div className="mb-4 border-b border-[var(--line)] pb-4">
         <Link href="/dashboard" className="flex items-center gap-2 text-2xl font-bold tracking-tight text-[var(--brand)]">
-          <Image src="/icon.png" alt="Fundr Logo" width={32} height={32} className="h-8 w-auto" style={{ width: "auto", height: "auto" }} priority />
+          <Image src="/icon.png" alt="Fundr Logo" width={32} height={32} className="h-8 w-8" priority />
           <span>Fundr</span>
         </Link>
         <p className="mt-1 text-sm text-[var(--muted)]">{isAdmin ? "Admin workspace" : "Creator workspace"}</p>
         <Link
           href={isAdmin ? "/admin" : "/settings"}
-          className={`mt-3 block rounded-xl border px-3 py-2 text-xs font-semibold ${statusClassName}`}
+          className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusClassName}`}
         >
           {isStatusLoading ? "KYC: checking status..." : statusLabel}
         </Link>

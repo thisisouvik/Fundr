@@ -1,4 +1,6 @@
 import { requireCreatorAccess } from "@/lib/auth/creator";
+import { VerifyOnChain } from "@/components/ui/VerifyOnChain";
+
 
 function formatXlm(amount: number) {
   return `${amount.toLocaleString(undefined, {
@@ -78,7 +80,8 @@ export default async function HistoryPage() {
               <th className="px-4 py-3 font-semibold">Campaign</th>
               <th className="px-4 py-3 font-semibold">Backer Wallet</th>
               <th className="px-4 py-3 font-semibold">Amount</th>
-              <th className="px-4 py-3 font-semibold">Transaction</th>
+              <th className="px-4 py-3 font-semibold">Tx Hash</th>
+              <th className="px-4 py-3 font-semibold">Verify</th>
             </tr>
           </thead>
           <tbody>
@@ -87,14 +90,17 @@ export default async function HistoryPage() {
                 <tr key={item.tx_hash} className="border-b border-[var(--line)] last:border-b-0">
                   <td className="px-4 py-3">{formatDate(item.created_at)}</td>
                   <td className="px-4 py-3">{titleById.get(item.campaign_id) ?? "Untitled"}</td>
-                  <td className="px-4 py-3">{item.wallet_address}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{item.wallet_address.slice(0, 8)}…{item.wallet_address.slice(-4)}</td>
                   <td className="px-4 py-3 font-semibold">{formatXlm(Number(item.amount_xlm ?? 0))}</td>
-                  <td className="px-4 py-3">{item.tx_hash.slice(0, 10)}...</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[var(--muted)]">{item.tx_hash.slice(0, 10)}…</td>
+                  <td className="px-4 py-3">
+                    <VerifyOnChain value={item.tx_hash} label="Verify ↗" />
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-[var(--muted)]">
+                <td colSpan={6} className="px-4 py-8 text-center text-[var(--muted)]">
                   No confirmed fundraising history yet.
                 </td>
               </tr>

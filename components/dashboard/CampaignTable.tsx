@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VerifyOnChain } from "@/components/ui/VerifyOnChain";
 
 interface CampaignRow {
   id: string;
@@ -6,6 +7,7 @@ interface CampaignRow {
   status: string;
   raised: string;
   goal: string;
+  contractAddress?: string;
 }
 
 interface CampaignTableProps {
@@ -33,12 +35,17 @@ export function CampaignTable({ rows }: CampaignTableProps) {
               <td className="px-4 py-3">{row.raised}</td>
               <td className="px-4 py-3">{row.goal}</td>
               <td className="px-4 py-3">
-                <Link
-                  href={`/fundraising/manage/${row.id}`}
-                  className="text-sm font-semibold text-[var(--brand)] transition hover:underline"
-                >
-                  Manage
-                </Link>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href={`/fundraising/manage/${row.id}`}
+                    className="text-sm font-semibold text-[var(--brand)] transition hover:underline"
+                  >
+                    Manage
+                  </Link>
+                  {row.contractAddress ? (
+                    <VerifyOnChain value={row.contractAddress} label="Contract ↗" />
+                  ) : null}
+                </div>
               </td>
             </tr>
           ))}
