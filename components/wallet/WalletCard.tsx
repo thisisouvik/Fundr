@@ -73,7 +73,7 @@ export default function WalletWidget({ role, serverAmount, savedWallet }: Props)
       const res = await fetch(`${HORIZON_URL}/accounts/${addr}`);
       if (!res.ok) { setBalance("0.0000"); return; }
       const data = await res.json();
-      const native = (data.balances ?? []).find((b: any) => b.asset_type === "native");
+      const native = (data.balances ?? []).find((b: { asset_type: string; balance: string }) => b.asset_type === "native");
       setBalance(native ? parseFloat(native.balance).toFixed(4) : "0.0000");
     } catch {
       setBalance("0.0000");

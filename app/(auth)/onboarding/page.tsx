@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const supabase: any = createClient();
+  const supabase = createClient();
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);

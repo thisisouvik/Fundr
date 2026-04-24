@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { FundraiserKycRow, ProfileRow } from "@/types/supabase";
+import Image from "next/image";
+
 
 interface NavItem {
   label: string;
@@ -131,8 +133,9 @@ export function ProtectedSidebar() {
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
       <div className="mb-4 border-b border-[var(--line)] pb-4">
-        <Link href="/dashboard" className="text-2xl font-bold tracking-tight text-[var(--brand)]">
-          Fundr
+        <Link href="/dashboard" className="flex items-center gap-2 text-2xl font-bold tracking-tight text-[var(--brand)]">
+          <Image src="/icon.png" alt="Fundr Logo" width={32} height={32} className="h-8 w-auto" style={{ width: "auto", height: "auto" }} priority />
+          <span>Fundr</span>
         </Link>
         <p className="mt-1 text-sm text-[var(--muted)]">{isAdmin ? "Admin workspace" : "Creator workspace"}</p>
         <Link

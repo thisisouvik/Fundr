@@ -7,6 +7,8 @@ import { BalanceDisplay } from "@/components/wallet/BalanceDisplay";
 import { WalletButton } from "@/components/wallet/WalletButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import Image from "next/image";
+
 
 const navLinks = [
   { label: "For Individuals", href: "/for-individuals" },
@@ -46,8 +48,9 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--background)]/90 backdrop-blur">
       <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 md:px-8">
-        <Link href="/" className="text-2xl font-bold tracking-tight text-[var(--brand)]">
-          Fundr
+        <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-tight text-[var(--brand)]">
+          <Image src="/icon.png" alt="Fundr Logo" width={32} height={32} className="h-8 w-auto" style={{ width: "auto", height: "auto" }} priority />
+          <span>Fundr</span>
         </Link>
 
         <ul className="hidden items-center gap-8 text-sm text-[var(--foreground)] lg:flex">

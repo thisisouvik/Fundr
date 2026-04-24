@@ -19,9 +19,9 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Fundr | Crowdfunding dApp",
+  title: "Fundr- Crowdfunding dApp",
   description:
-    "A modern crowdfunding dApp interface inspired by your Fundr theme, ready for Stellar web3 integration.",
+    "A modern crowdfunding dApp for secure and transparnet funding for your next campaighns",
 };
 
 export default function RootLayout({

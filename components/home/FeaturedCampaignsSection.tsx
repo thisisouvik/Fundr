@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function FeaturedCampaignsSection() {
   const supabase = await createClient();
-  const now = new Date();
 
   // Fetch top 4 active campaigns
   const { data: campaigns } = await supabase
