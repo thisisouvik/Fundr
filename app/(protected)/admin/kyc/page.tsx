@@ -173,27 +173,37 @@ export default async function AdminKycPage({
                 ) : null}
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <form action={reviewKyc}>
-                    <input type="hidden" name="kyc_id" value={record.id} />
-                    <input type="hidden" name="decision" value="approved" />
-                    <button
-                      type="submit"
-                      className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
-                    >
-                      Approve
-                    </button>
-                  </form>
+                  {record.status === "pending" ? (
+                    <>
+                      <form action={reviewKyc}>
+                        <input type="hidden" name="kyc_id" value={record.id} />
+                        <input type="hidden" name="decision" value="approved" />
+                        <button
+                          type="submit"
+                          className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                        >
+                          Approve
+                        </button>
+                      </form>
 
-                  <form action={reviewKyc}>
-                    <input type="hidden" name="kyc_id" value={record.id} />
-                    <input type="hidden" name="decision" value="rejected" />
-                    <button
-                      type="submit"
-                      className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
-                    >
-                      Reject
-                    </button>
-                  </form>
+                      <form action={reviewKyc}>
+                        <input type="hidden" name="kyc_id" value={record.id} />
+                        <input type="hidden" name="decision" value="rejected" />
+                        <button
+                          type="submit"
+                          className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                        >
+                          Reject
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <div className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${
+                      record.status === "approved" ? "bg-emerald-600" : "bg-red-600"
+                    }`}>
+                      {record.status === "approved" ? "Accepted" : "Rejected"}
+                    </div>
+                  )}
                 </div>
               </article>
             );
