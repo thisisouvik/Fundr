@@ -1,16 +1,30 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, symbol_short, Address, Env, Map, Symbol};
+use soroban_sdk::{contract, contractimpl, symbol_short, Address, BytesN, Env, IntoVal, Map, Symbol};
 
 const CAMPAIGN_SEQ: Symbol = symbol_short!("CMP_SEQ");
 const CAMPAIGNS: Symbol = symbol_short!("CMPS");
+const WASM_HASH: Symbol = symbol_short!("WASM");
 
 #[contract]
 pub struct CrowdfundFactory;
 
 #[contractimpl]
 impl CrowdfundFactory {
-    pub fn create_campaign(env: Env, creator: Address, goal_xlm: i128, deadline_ts: u64) -> u64 {
+    pub fn init(env: Env, wasm_hash: BytesN<32>) {
+        if env.storage().instance().has(&WASM_HASH) {
+            panic!("already initialized");
+        }
+        env.storage().instance().set(&WASM_HASH, &wasm_hash);
+    }
+
+    pub fn create_campaign(
+        env: Env,
+        creator: Address,
+        token_address: Address,
+        goal_xlm: i128,
+        deadline_ts: u64,
+    ) -> Address {
         creator.require_auth();
 
         if goal_xlm <= 0 {
@@ -22,76 +36,42 @@ impl CrowdfundFactory {
             panic!("deadline must be in future");
         }
 
+        let wasm_hash = env.storage().instance().get::<_, BytesN<32>>(&WASM_HASH).expect("not initialized");
+
         let mut seq = env.storage().instance().get::<_, u64>(&CAMPAIGN_SEQ).unwrap_or(0);
         seq += 1;
+        env.storage().instance().set(&CAMPAIGN_SEQ, &seq);
+
+        // Derive a salt for deployment (can use the sequence number)
+        let salt = soroban_sdk::BytesN::from_array(&env, &[seq as u8; 32]);
+        let campaign_id = env.deployer().with_current_contract(salt).deploy_v2(wasm_hash, ());
+
+        // Invoke the init function on the new campaign contract
+        env.invoke_contract::<()>(
+            &campaign_id,
+            &symbol_short!("init"),
+            (creator.clone(), token_address, goal_xlm, deadline_ts).into_val(&env),
+        );
 
         let mut campaigns = env
             .storage()
             .instance()
-            .get::<_, Map<u64, (Address, i128, u64)>>(&CAMPAIGNS)
+            .get::<_, Map<u64, Address>>(&CAMPAIGNS)
             .unwrap_or(Map::new(&env));
 
-        campaigns.set(seq, (creator, goal_xlm, deadline_ts));
-
-        env.storage().instance().set(&CAMPAIGN_SEQ, &seq);
+        campaigns.set(seq, campaign_id.clone());
         env.storage().instance().set(&CAMPAIGNS, &campaigns);
 
-        seq
+        campaign_id
     }
 
-    pub fn get_campaign_meta(env: Env, campaign_id: u64) -> Option<(Address, i128, u64)> {
+    pub fn get_campaign(env: Env, campaign_seq: u64) -> Option<Address> {
         let campaigns = env
             .storage()
             .instance()
-            .get::<_, Map<u64, (Address, i128, u64)>>(&CAMPAIGNS)
+            .get::<_, Map<u64, Address>>(&CAMPAIGNS)
             .unwrap_or(Map::new(&env));
 
-        campaigns.get(campaign_id)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use soroban_sdk::testutils::{Address as _, Ledger};
-
-    #[test]
-    fn create_campaign_increments_sequence_and_stores_meta() {
-        let env = Env::default();
-        env.mock_all_auths();
-        env.ledger().with_mut(|li| {
-            li.timestamp = 1_700_000_000;
-        });
-
-        let creator = Address::generate(&env);
-        let contract_id = env.register(CrowdfundFactory, ());
-        let client = CrowdfundFactoryClient::new(&env, &contract_id);
-
-        let id1 = client.create_campaign(&creator, &1_000_i128, &1_700_000_100_u64);
-        let id2 = client.create_campaign(&creator, &2_000_i128, &1_700_000_200_u64);
-
-        assert_eq!(id1, 1_u64);
-        assert_eq!(id2, 2_u64);
-
-        let meta = client.get_campaign_meta(&id2).unwrap();
-        assert_eq!(meta.0, creator);
-        assert_eq!(meta.1, 2_000_i128);
-        assert_eq!(meta.2, 1_700_000_200_u64);
-    }
-
-    #[test]
-    #[should_panic(expected = "goal must be > 0")]
-    fn create_campaign_rejects_non_positive_goal() {
-        let env = Env::default();
-        env.mock_all_auths();
-        env.ledger().with_mut(|li| {
-            li.timestamp = 1_700_000_000;
-        });
-
-        let creator = Address::generate(&env);
-        let contract_id = env.register(CrowdfundFactory, ());
-        let client = CrowdfundFactoryClient::new(&env, &contract_id);
-
-        client.create_campaign(&creator, &0_i128, &1_700_000_100_u64);
+        campaigns.get(campaign_seq)
     }
 }

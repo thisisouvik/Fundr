@@ -155,34 +155,53 @@ Upsert-EnvLine -File $ENV_FILE -Key "NEXT_PUBLIC_SOROBAN_RPC_URL"     -Value $RP
 Upsert-EnvLine -File $ENV_FILE -Key "NEXT_PUBLIC_STELLAR_HORIZON_URL" -Value $HORIZON_URL
 Write-Ok ".env.local updated with NEXT_PUBLIC_FACTORY_CONTRACT_ID=$factoryContractId"
 
-# Step 7: Deploy Campaign contract (optional)
+# Step 7: Install Campaign WASM and Init Factory
 if (Test-Path $CAMPAIGN_WASM) {
-    Write-Step "Deploying Campaign contract to $NETWORK"
-    $campaignArgs = @(
-        "contract", "deploy",
+    Write-Step "Installing Campaign WASM on $NETWORK"
+    $installArgs = @(
+        "contract", "install",
         "--wasm",           $CAMPAIGN_WASM,
         "--source-account", $secretKey,
-        "--network",        $NETWORK,
-        "--ignore-checks",
-        "--optimize"
+        "--network",        $NETWORK
     )
     $tmpStderr2 = [System.IO.Path]::GetTempFileName()
     $ErrorActionPreference = "Continue"
-    $campaignOutput = & stellar @campaignArgs 2>$tmpStderr2
-    $campaignExit   = $LASTEXITCODE
+    $installOutput = & stellar @installArgs 2>$tmpStderr2
+    $installExit   = $LASTEXITCODE
     $ErrorActionPreference = "Stop"
     Remove-Item $tmpStderr2 -Force -ErrorAction SilentlyContinue
 
-    if ($campaignExit -eq 0) {
-        $campaignId = ($campaignOutput | Where-Object { $_.ToString().Trim() } | Select-Object -Last 1).ToString().Trim()
-        Upsert-EnvLine -File $ENV_FILE -Key "NEXT_PUBLIC_CAMPAIGN_CONTRACT_ID" -Value $campaignId
-        Write-Ok "Campaign contract ID: $campaignId"
+    if ($installExit -eq 0) {
+        $wasmHash = ($installOutput | Where-Object { $_.ToString().Trim() } | Select-Object -Last 1).ToString().Trim()
+        Write-Ok "Campaign WASM Hash: $wasmHash"
+        
+        Write-Step "Initializing Factory with WASM Hash"
+        $initArgs = @(
+            "contract", "invoke",
+            "--id",             $factoryContractId,
+            "--source-account", $secretKey,
+            "--network",        $NETWORK,
+            "--", "init",
+            "--wasm_hash",      $wasmHash
+        )
+        $ErrorActionPreference = "Continue"
+        $initOutput = & stellar @initArgs
+        $initExit = $LASTEXITCODE
+        $ErrorActionPreference = "Stop"
+        
+        if ($initExit -eq 0) {
+            Write-Ok "Factory successfully initialized!"
+        } else {
+            Write-Warn "Factory init failed (non-fatal, might be already initialized). Output:"
+            Write-Host ($initOutput -join "`n")
+        }
+        
     } else {
-        Write-Warn "Campaign deploy failed (non-fatal). Output:"
-        Write-Host ($campaignOutput -join "`n")
+        Write-Warn "Campaign install failed (non-fatal). Output:"
+        Write-Host ($installOutput -join "`n")
     }
 } else {
-    Write-Warn "campaign.wasm not found - skipping Campaign deploy"
+    Write-Warn "campaign.wasm not found - skipping Campaign install"
 }
 
 # Step 8: Run health check

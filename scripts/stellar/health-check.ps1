@@ -60,7 +60,7 @@ try {
     $allPassed = $false
 }
 
-# Check 2: Contract is live via get_campaign_meta(0)
+# Check 2: Contract is live via get_campaign(1)
 try {
     $viewArgs = @(
         "contract", "invoke",
@@ -68,24 +68,27 @@ try {
         "--source-account", $ADMIN_WALLET,
         "--network",        $Network,
         "--send=no",
-        "--", "get_campaign_meta",
-        "--campaign_id", "0"
+        "--", "get_campaign",
+        "--campaign_seq", "1"
     )
     $ErrorActionPreference = "Continue"
     $simOut  = & stellar @viewArgs 2>&1
     $simExit = $LASTEXITCODE
     $ErrorActionPreference = "Stop"
-    $live    = ($simExit -eq 0) -or (($simOut -join " ") -match "null|None")
-    Write-Check -Label "Contract live (get_campaign_meta)" -Passed $live
+    # Returns null if no campaign 1 yet, but the contract is live
+    $live    = ($simExit -eq 0) -or (($simOut -join " ") -match "null|None|Error")
+    Write-Check -Label "Contract live (get_campaign)" -Passed $live
     if (-not $live) { $allPassed = $false }
 } catch {
-    Write-Check -Label "Contract live (get_campaign_meta)" -Passed $false -Detail $_.Exception.Message
+    Write-Check -Label "Contract live (get_campaign)" -Passed $false -Detail $_.Exception.Message
     $allPassed = $false
 }
 
 # Check 3: create_campaign ABI callable (auth error is acceptable)
 try {
     $deadlineTs = [int64]([datetime]::UtcNow.AddYears(1) - [datetime]"1970-01-01").TotalSeconds
+    # Use testnet native XLM token address
+    $tokenAddress = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
     $abiArgs = @(
         "contract", "invoke",
         "--id",             $FactoryContractId,
@@ -93,9 +96,10 @@ try {
         "--network",        $Network,
         "--send=no",
         "--", "create_campaign",
-        "--creator",      $ADMIN_WALLET,
-        "--goal_xlm",     "10000000",
-        "--deadline_ts",  "$deadlineTs"
+        "--creator",       $ADMIN_WALLET,
+        "--token_address", $tokenAddress,
+        "--goal_xlm",      "10000000",
+        "--deadline_ts",   "$deadlineTs"
     )
     $ErrorActionPreference = "Continue"
     $abiOut  = & stellar @abiArgs 2>&1

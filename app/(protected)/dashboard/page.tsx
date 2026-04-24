@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CampaignTable } from "@/components/dashboard/CampaignTable";
 import { StatCard } from "@/components/dashboard/StatCard";
+import WalletCard from "@/components/wallet/WalletCard";
 import { createClient } from "@/lib/supabase/server";
 import type { CampaignRow, ProfileRow } from "@/types/supabase";
 
@@ -27,7 +28,7 @@ export default async function DashboardPage() {
   const [profileResponse, campaignsResponse] = await Promise.all([
     supabase
       .from("profiles")
-      .select("total_raised_xlm, role")
+      .select("total_raised_xlm, role, wallet_address")
       .eq("id", userId ?? "")
       .maybeSingle(),
     supabase
@@ -37,7 +38,10 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false }),
   ]);
 
-  const profile = profileResponse.data as Pick<ProfileRow, "role" | "total_raised_xlm"> | null;
+  const profile = profileResponse.data as Pick<
+    ProfileRow,
+    "role" | "total_raised_xlm" | "wallet_address"
+  > | null;
   const campaigns = campaignsResponse.data as Array<
     Pick<CampaignRow, "id" | "title" | "status" | "goal_xlm">
   > | null;
@@ -51,6 +55,15 @@ export default async function DashboardPage() {
         .in("campaign_id", campaignIds)
         .eq("status", "confirmed")
     : { data: [] as Array<{ campaign_id: string; wallet_address: string; amount_xlm: number }> };
+
+  // Total funded BY this user (as a funder on other campaigns)
+  const { data: myContributions } = userId
+    ? await supabase
+        .from("contributions")
+        .select("amount_xlm")
+        .eq("wallet_address", profile?.wallet_address ?? "")
+        .eq("status", "confirmed")
+    : { data: [] as Array<{ amount_xlm: number }> };
 
   const uniqueBackers = new Set((contributions ?? []).map((row) => row.wallet_address)).size;
   const activeCampaigns = (campaigns ?? []).filter((campaign) => campaign.status === "active").length;
@@ -68,6 +81,12 @@ export default async function DashboardPage() {
     0,
   );
 
+  // Sum of what this user has personally contributed (as a funder)
+  const totalFunded = (myContributions ?? []).reduce(
+    (sum, row) => sum + Number(row.amount_xlm ?? 0),
+    0,
+  );
+
   const campaignRows = (campaigns ?? []).map((campaign) => ({
     id: campaign.id,
     title: campaign.title,
@@ -77,6 +96,20 @@ export default async function DashboardPage() {
   }));
 
   const isAdminPanelView = isDedicatedAdmin || profile?.role === "admin";
+  const isFundraiser = profile?.role === "creator" || isAdminPanelView;
+  const walletRole: "funder" | "fundraiser" | "admin" = isAdminPanelView
+    ? "admin"
+    : isFundraiser
+      ? "fundraiser"
+      : "funder";
+
+  // The server-side amount shown in the wallet card
+  const walletAmount = isAdminPanelView
+    ? totalRaised          // admin: platform total
+    : isFundraiser
+      ? totalRaised        // fundraiser: total received across their campaigns
+      : totalFunded;       // funder: total they've contributed
+
   const dashboardLabel = isAdminPanelView ? "Admin Dashboard" : "Creator Dashboard";
   const dashboardSubtitle = isAdminPanelView
     ? "Track platform activity and review campaign and fundraiser health from your admin account."
@@ -84,6 +117,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Fixed top-right wallet widget — rendered outside the content flow */}
+      <WalletCard
+        role={walletRole}
+        serverAmount={walletAmount}
+        savedWallet={profile?.wallet_address ?? null}
+      />
+
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold">{dashboardLabel}</h1>

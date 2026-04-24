@@ -7,3 +7,4 @@ export { QuickFundraisersSection } from "@/components/home/QuickFundraisersSecti
 export { VisionSection } from "@/components/home/VisionSection";
 export { ImpactStoriesSection } from "@/components/home/ImpactStoriesSection";
 export { FaqSection } from "@/components/home/FaqSection";
+export { FeedbacksSection } from "@/components/home/FeedbacksSection";

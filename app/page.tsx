@@ -10,8 +10,10 @@ import {
   QuickFundraisersSection,
   SocialProofSection,
   VisionSection,
+  FeedbacksSection,
 } from "@/components/home";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
+
 
 export default function Home() {
   return (
@@ -28,6 +30,7 @@ export default function Home() {
         <QuickFundraisersSection />
         <ImpactStoriesSection />
         <VisionSection />
+        <FeedbacksSection />
         <FaqSection />
       </main>
 
