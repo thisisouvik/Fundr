@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "next lint",
     "test:e2e": "playwright test",
     "deploy:stellar": "powershell -ExecutionPolicy Bypass -File ./scripts/stellar/deploy.ps1",
     "health:stellar": "powershell -ExecutionPolicy Bypass -File ./scripts/stellar/health-check.ps1"

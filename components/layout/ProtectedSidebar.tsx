@@ -148,7 +148,10 @@ export function ProtectedSidebar() {
 
       <nav aria-label="Protected navigation" className="space-y-2">
         {links.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive =
+            item.href === "/dashboard" || item.href === "/admin"
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const kycLockedRoutes = ["/fundraising", "/dashboard/performance", "/history"];
           const isKycLockedRoute = kycLockedRoutes.includes(item.href);
           const isKycLocked = isKycLockedRoute && !hasCreatorAccess;

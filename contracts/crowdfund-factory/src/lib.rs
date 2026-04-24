@@ -25,7 +25,8 @@ impl CrowdfundFactory {
         goal_xlm: i128,
         deadline_ts: u64,
     ) -> Address {
-        creator.require_auth();
+        // creator.require_auth() is removed because the platform backend
+        // submits and signs this transaction on behalf of the user.
 
         if goal_xlm <= 0 {
             panic!("goal must be > 0");

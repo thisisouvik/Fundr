@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireCampaignOwnerAccess } from "@/lib/auth/creator";
 import { VerifyOnChain } from "@/components/ui/VerifyOnChain";
+import { WithdrawButton } from "@/components/campaigns/WithdrawButton";
 
 
 const CAMPAIGN_MEDIA_BUCKET = "campaign-media";
@@ -471,6 +472,14 @@ export default async function ManageCampaignPage({
               Contract: {campaignFull.contract_address}
             </p>
           ) : null}
+
+          {campaignFull.contract_address && (
+            <WithdrawButton 
+              contractId={campaignFull.contract_address} 
+              deadline={campaignFull.deadline} 
+              goalXlm={Number(campaignFull.goal_xlm)} 
+            />
+          )}
         </section>
       ) : null}
 

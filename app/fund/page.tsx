@@ -15,7 +15,7 @@ export default async function FundPage({
   // Fetch all active campaigns
   const { data: activeCampaigns } = await supabase
     .from("campaigns")
-    .select("id, title, location, goal_xlm")
+    .select("id, title, goal_xlm")
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
@@ -43,7 +43,7 @@ export default async function FundPage({
     return {
       id: c.id,
       title: c.title,
-      location: c.location || "Global",
+      location: "Global",
       raised,
       progress,
       goal,

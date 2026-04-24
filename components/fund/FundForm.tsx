@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { WalletButton } from "@/components/wallet/WalletButton";
 
 export interface CampaignOption {
   id: string;
@@ -47,10 +46,7 @@ export function FundForm({ campaigns, preselectedTitle }: FundFormProps) {
         <div className="flex flex-col gap-4 border-b border-[var(--line)] pb-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-2xl font-bold tracking-tight md:text-[1.75rem]">Fund a campaign</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">Use a connected wallet or continue anonymously.</p>
-          </div>
-          <div className="shrink-0">
-            <WalletButton />
+            <p className="mt-1 text-sm text-[var(--muted)]">Make sure your wallet is connected via the widget above, or continue anonymously.</p>
           </div>
         </div>
 

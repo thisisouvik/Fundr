@@ -47,16 +47,12 @@ export function CommentsSection({ campaignId }: CommentsSection) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { data: newCommentData } = await supabase
-        .from("comments")
-        .insert({
-          campaign_id: campaignId,
-          author_id: user?.id || null,
-          content: newComment,
-          is_hidden: false,
-        })
-        .select()
-        .single();
+      const { addComment } = await import("@/app/campaigns/[slug]/actions");
+      const newCommentData = await addComment({
+        campaign_id: campaignId,
+        author_id: user?.id || null,
+        content: newComment,
+      });
 
       if (newCommentData) {
         setComments((previous) => [newCommentData as CampaignComment, ...previous]);
