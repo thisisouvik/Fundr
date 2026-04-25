@@ -47,7 +47,7 @@ export default async function AdminPanelPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h1 className="text-4xl font-bold">Admin Home</h1>
+        <h1 className="text-4xl font-bold">Admin's Home</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Review KYC, moderate campaigns, and manage platform-level quality controls.
         </p>

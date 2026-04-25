@@ -188,7 +188,7 @@ export default async function SettingsPage({
       <section>
         <h1 className="text-4xl font-bold">Profile and Settings</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Manage your profile details and submit one-time KYC so admins can review fundraiser access.
+          Manage your profile details{profile?.role === "admin" ? "." : " and submit one-time KYC so admins can review fundraiser access."}
         </p>
       </section>
 
@@ -293,131 +293,133 @@ export default async function SettingsPage({
         </dl>
       </section>
 
-      <section className="max-w-3xl rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
-        <h2 className="text-xl font-bold">Fundraiser KYC (One-time)</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Submit once only. Your legal details and document cannot be edited after submission.
-        </p>
-
-        {kyc ? (
-          <div className="mt-4 space-y-3 rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] p-4 text-sm">
-            <p>
-              <span className="font-semibold">Status:</span> {kyc.status}
-            </p>
-            <p>
-              <span className="font-semibold">Submitted at:</span>{" "}
-              {new Date(kyc.submitted_at).toLocaleString()}
-            </p>
-            <p>
-              <span className="font-semibold">Legal name:</span> {kyc.legal_name}
-            </p>
-            <p>
-              <span className="font-semibold">Country:</span> {kyc.country}
-            </p>
-            <p>
-              <span className="font-semibold">ID number:</span> {kyc.id_number}
-            </p>
-            {kycDocumentLink ? (
-              <p className="break-all">
-                <span className="font-semibold">Document:</span>{" "}
-                <a
-                  href={kycDocumentLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[var(--brand)] underline"
-                >
-                  View uploaded ID document
-                </a>
-              </p>
-            ) : null}
-          </div>
-        ) : canSubmitKyc ? (
-          <form action={submitKyc} className="mt-4 space-y-4">
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Legal Name</span>
-              <input
-                required
-                name="legal_name"
-                type="text"
-                className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-sm outline-none"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Country</span>
-              <input
-                required
-                name="country"
-                type="text"
-                className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-sm outline-none"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Government ID Number</span>
-              <input
-                required
-                name="id_number"
-                type="text"
-                className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-sm outline-none"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Government ID Image</span>
-              <input
-                required
-                name="document_image"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-sm outline-none"
-              />
-              <p className="text-xs text-[var(--muted)]">Accepted: PNG, JPG, WEBP. Maximum file size: 5 MB.</p>
-            </label>
-
-            {saved === "kyc" ? (
-              <p className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                KYC submitted successfully. Your status is now pending review.
-              </p>
-            ) : null}
-
-            {error === "save" ||
-            error === "invalid" ||
-            error === "kyc_file_missing" ||
-            error === "kyc_file_type" ||
-            error === "kyc_file_size" ||
-            error === "kyc_upload" ||
-            error === "kyc_required" ? (
-              <p className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-600">
-                {error === "save"
-                  ? "KYC submission failed. Please try again."
-                  : error === "kyc_file_missing"
-                    ? "Please upload your government ID image."
-                    : error === "kyc_file_type"
-                      ? "Only image files are allowed for KYC."
-                      : error === "kyc_file_size"
-                        ? "KYC image is too large. Maximum size is 5 MB."
-                        : error === "kyc_upload"
-                          ? "Upload failed. Please try again."
-                    : error === "kyc_required"
-                      ? "Complete your KYC to unlock creator-only pages."
-                          : "Please provide valid KYC values."}
-              </p>
-            ) : null}
-
-            <button
-              type="submit"
-              className="rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--brand-strong)]"
-            >
-              Submit KYC (One-time)
-            </button>
-          </form>
-        ) : (
-          <p className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-4 py-3 text-sm text-[var(--muted)]">
-            KYC submission is currently unavailable.
+      {profile?.role !== "admin" && (
+        <section className="max-w-3xl rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
+          <h2 className="text-xl font-bold">Fundraiser KYC (One-time)</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Submit once only. Your legal details and document cannot be edited after submission.
           </p>
-        )}
-      </section>
+
+          {kyc ? (
+            <div className="mt-4 space-y-3 rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] p-4 text-sm">
+              <p>
+                <span className="font-semibold">Status:</span> {kyc.status}
+              </p>
+              <p>
+                <span className="font-semibold">Submitted at:</span>{" "}
+                {new Date(kyc.submitted_at).toLocaleString()}
+              </p>
+              <p>
+                <span className="font-semibold">Legal name:</span> {kyc.legal_name}
+              </p>
+              <p>
+                <span className="font-semibold">Country:</span> {kyc.country}
+              </p>
+              <p>
+                <span className="font-semibold">ID number:</span> {kyc.id_number}
+              </p>
+              {kycDocumentLink ? (
+                <p className="break-all">
+                  <span className="font-semibold">Document:</span>{" "}
+                  <a
+                    href={kycDocumentLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[var(--brand)] underline"
+                  >
+                    View uploaded ID document
+                  </a>
+                </p>
+              ) : null}
+            </div>
+          ) : canSubmitKyc ? (
+            <form action={submitKyc} className="mt-4 space-y-4">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium">Legal Name</span>
+                <input
+                  required
+                  name="legal_name"
+                  type="text"
+                  className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-sm outline-none"
+                />
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-medium">Country</span>
+                <input
+                  required
+                  name="country"
+                  type="text"
+                  className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-sm outline-none"
+                />
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-medium">Government ID Number</span>
+                <input
+                  required
+                  name="id_number"
+                  type="text"
+                  className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-sm outline-none"
+                />
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-medium">Government ID Image</span>
+                <input
+                  required
+                  name="document_image"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-sm outline-none"
+                />
+                <p className="text-xs text-[var(--muted)]">Accepted: PNG, JPG, WEBP. Maximum file size: 5 MB.</p>
+              </label>
+
+              {saved === "kyc" ? (
+                <p className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  KYC submitted successfully. Your status is now pending review.
+                </p>
+              ) : null}
+
+              {error === "save" ||
+              error === "invalid" ||
+              error === "kyc_file_missing" ||
+              error === "kyc_file_type" ||
+              error === "kyc_file_size" ||
+              error === "kyc_upload" ||
+              error === "kyc_required" ? (
+                <p className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-600">
+                  {error === "save"
+                    ? "KYC submission failed. Please try again."
+                    : error === "kyc_file_missing"
+                      ? "Please upload your government ID image."
+                      : error === "kyc_file_type"
+                        ? "Only image files are allowed for KYC."
+                        : error === "kyc_file_size"
+                          ? "KYC image is too large. Maximum size is 5 MB."
+                          : error === "kyc_upload"
+                            ? "Upload failed. Please try again."
+                      : error === "kyc_required"
+                        ? "Complete your KYC to unlock creator-only pages."
+                            : "Please provide valid KYC values."}
+                </p>
+              ) : null}
+
+              <button
+                type="submit"
+                className="rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--brand-strong)]"
+              >
+                Submit KYC (One-time)
+              </button>
+            </form>
+          ) : (
+            <p className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] px-4 py-3 text-sm text-[var(--muted)]">
+              KYC submission is currently unavailable.
+            </p>
+          )}
+        </section>
+      )}
     </div>
   );
 }

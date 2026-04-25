@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CampaignTable } from "@/components/dashboard/CampaignTable";
 import { StatCard } from "@/components/dashboard/StatCard";
 
@@ -42,6 +43,13 @@ export default async function DashboardPage() {
     ProfileRow,
     "role" | "total_raised_xlm" | "wallet_address"
   > | null;
+
+  const isAdminPanelView = isDedicatedAdmin || profile?.role === "admin";
+  
+  if (isAdminPanelView) {
+    redirect("/admin");
+  }
+
   const campaigns = campaignsResponse.data as Array<
     Pick<CampaignRow, "id" | "title" | "status" | "goal_xlm" | "contract_address" | "factory_tx_hash">
   > | null;
@@ -83,12 +91,8 @@ export default async function DashboardPage() {
     contractAddress: campaign.contract_address ?? undefined,
   }));
 
-  const isAdminPanelView = isDedicatedAdmin || profile?.role === "admin";
-
-  const dashboardLabel = isAdminPanelView ? "Admin Dashboard" : "Creator Dashboard";
-  const dashboardSubtitle = isAdminPanelView
-    ? "Track platform activity and review campaign and fundraiser health from your admin account."
-    : "Track campaign performance and manage fundraising activity from your account.";
+  const dashboardLabel = "Creator Dashboard";
+  const dashboardSubtitle = "Track campaign performance and manage fundraising activity from your account.";
 
   return (
     <div className="space-y-8">
@@ -99,14 +103,12 @@ export default async function DashboardPage() {
           <h1 className="text-4xl font-bold">{dashboardLabel}</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">{dashboardSubtitle}</p>
         </div>
-        {!isAdminPanelView ? (
           <Link
             href="/dashboard/performance"
             className="rounded-full border border-[var(--brand)] px-4 py-2 text-sm font-semibold text-[var(--brand)] transition hover:bg-[var(--brand)] hover:text-white"
           >
             Campaign Performance
           </Link>
-        ) : null}
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

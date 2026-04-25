@@ -30,14 +30,31 @@ export async function waitForSorobanTx(
   maxTries = 30,
 ): Promise<rpc.Api.GetTransactionResponse> {
   for (let attempt = 0; attempt < maxTries; attempt++) {
-    const result = await server.getTransaction(txHash);
+    let result: rpc.Api.GetTransactionResponse;
+    try {
+      result = await server.getTransaction(txHash);
+    } catch (e: any) {
+      // "Bad union switch: N" is thrown by the SDK when the transaction
+      // failed on-chain and the failure XDR contains a type the SDK version
+      // can't decode. Treat it as an on-chain failure.
+      if (e?.message?.includes("Bad union switch")) {
+        throw new Error(
+          `Transaction failed on-chain (the Soroban runtime rejected it). ` +
+          `Inspect on Stellar Expert: https://stellar.expert/explorer/testnet/tx/${txHash}`
+        );
+      }
+      throw e;
+    }
 
     if (result.status === rpc.Api.GetTransactionStatus.SUCCESS) {
       return result;
     }
 
     if (result.status === rpc.Api.GetTransactionStatus.FAILED) {
-      throw new Error(`Transaction failed on-chain (hash: ${txHash})`);
+      throw new Error(
+        `Transaction failed on-chain (hash: ${txHash}). ` +
+        `Inspect: https://stellar.expert/explorer/testnet/tx/${txHash}`
+      );
     }
 
     // NOT_FOUND → still processing, wait and retry
@@ -48,3 +65,4 @@ export async function waitForSorobanTx(
     `Transaction confirmation timed out after ${maxTries}s (hash: ${txHash})`,
   );
 }
+

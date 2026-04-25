@@ -39,7 +39,7 @@ export function ProtectedSidebar() {
     }
 
     return [
-      { label: "Admin Panel", href: "/admin" },
+      { label: "Admin's Home", href: "/admin" },
       { label: "KYC Review", href: "/admin/kyc" },
       { label: "Campaign Moderation", href: "/admin/campaigns" },
       { label: "Settings", href: "/settings" },

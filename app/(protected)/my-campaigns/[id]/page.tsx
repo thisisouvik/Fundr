@@ -47,10 +47,7 @@ export default async function MyCampaignDetailPage({
   );
   const isExpired = daysLeft === 0;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const imageUrl = campaign.image_url
-    ? `${supabaseUrl}/storage/v1/object/public/campaign-media/${campaign.image_url}`
-    : null;
+  const imageUrl = campaign.image_url || null;
 
   return (
     <div className="space-y-6">

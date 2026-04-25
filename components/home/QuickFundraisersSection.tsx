@@ -41,6 +41,7 @@ export function QuickFundraisersSection() {
             type="button"
             onClick={goToPreviousStep}
             aria-label="Previous fundraising step"
+            suppressHydrationWarning
             className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface-soft)] text-2xl font-semibold text-[var(--brand)] transition hover:border-[var(--brand)] hover:bg-[var(--brand-soft)]"
           >
             ←
@@ -97,6 +98,7 @@ export function QuickFundraisersSection() {
             type="button"
             onClick={goToNextStep}
             aria-label="Next fundraising step"
+            suppressHydrationWarning
             className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface-soft)] text-2xl font-semibold text-[var(--brand)] transition hover:border-[var(--brand)] hover:bg-[var(--brand-soft)]"
           >
             →
@@ -112,6 +114,7 @@ export function QuickFundraisersSection() {
                 key={step.number}
                 type="button"
                 onClick={() => jumpToStep(index)}
+                suppressHydrationWarning
                 className={`border-l-2 px-3 text-left transition ${
                   isActive
                     ? "border-[var(--brand)] bg-[var(--brand-soft)]/40"

@@ -35,7 +35,7 @@ export function VerifyOnChain({ value, label, variant = "pill" }: VerifyOnChainP
         href={href}
         target="_blank"
         rel="noreferrer noopener"
-        className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)] underline decoration-dotted underline-offset-2 transition hover:decoration-solid"
+        className="inline-flex w-fit items-center gap-1 whitespace-nowrap text-xs font-semibold text-[var(--brand)] underline decoration-dotted underline-offset-2 transition hover:decoration-solid"
       >
         {text}
       </Link>
@@ -48,7 +48,7 @@ export function VerifyOnChain({ value, label, variant = "pill" }: VerifyOnChainP
         href={href}
         target="_blank"
         rel="noreferrer noopener"
-        className="inline-flex items-center gap-2 rounded-xl border border-[var(--brand)] px-4 py-2 text-sm font-semibold text-[var(--brand)] transition hover:bg-[var(--brand)] hover:text-white"
+        className="inline-flex w-fit items-center gap-2 whitespace-nowrap rounded-xl border border-[var(--brand)] px-4 py-2 text-sm font-semibold text-[var(--brand)] transition hover:bg-[var(--brand)] hover:text-white"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -77,7 +77,7 @@ export function VerifyOnChain({ value, label, variant = "pill" }: VerifyOnChainP
       href={href}
       target="_blank"
       rel="noreferrer noopener"
-      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--brand)]/40 bg-[var(--brand)]/8 px-3 py-1 text-xs font-semibold text-[var(--brand)] transition hover:border-[var(--brand)] hover:bg-[var(--brand)] hover:text-white"
+      className="inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--brand)]/40 bg-[var(--brand)]/8 px-3 py-1 text-xs font-semibold text-[var(--brand)] transition hover:border-[var(--brand)] hover:bg-[var(--brand)] hover:text-white"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

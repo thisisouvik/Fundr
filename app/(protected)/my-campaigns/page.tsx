@@ -95,7 +95,7 @@ export default async function MyCampaignsPage() {
                   {c.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/campaign-media/${c.image_url}`}
+                      src={c.image_url}
                       alt={c.title}
                       className="h-full w-full object-cover"
                     />

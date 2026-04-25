@@ -49,10 +49,12 @@ export function Footer() {
             <input
               type="email"
               placeholder="Email address"
+              suppressHydrationWarning
               className="w-full rounded-full border border-white/30 bg-white/15 px-4 py-2 text-sm text-white placeholder:text-white/70 outline-none"
             />
             <button
               type="submit"
+              suppressHydrationWarning
               className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-strong)] transition hover:bg-white/90"
             >
               Join

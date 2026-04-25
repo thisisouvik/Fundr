@@ -72,6 +72,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={handleSignOut}
+                suppressHydrationWarning
                 className="hidden rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold transition hover:border-[var(--brand)] hover:text-[var(--brand)] md:inline-flex md:text-sm"
               >
                 Sign Out
@@ -100,6 +101,7 @@ export function Navbar() {
             onClick={() => setMobileOpen((current) => !current)}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileOpen}
+            suppressHydrationWarning
           >
             {mobileOpen ? "X" : "="}
           </button>
@@ -144,6 +146,7 @@ export function Navbar() {
               <li className="pt-2">
                 <button
                   type="button"
+                  suppressHydrationWarning
                   onClick={async () => {
                     await handleSignOut();
                     setMobileOpen(false);
