@@ -189,18 +189,6 @@ USING (
   OR public.is_admin(auth.uid())
 );
 
-DROP POLICY IF EXISTS contributions_insert_public ON public.contributions;
-CREATE POLICY contributions_insert_public
-ON public.contributions
-FOR INSERT
-TO public
-WITH CHECK (
-  status IN ('pending', 'confirmed')
-  AND tx_hash IS NOT NULL
-  AND wallet_address IS NOT NULL
-  AND amount_xlm > 0
-);
-
 DROP POLICY IF EXISTS contributions_update_admin_only ON public.contributions;
 CREATE POLICY contributions_update_admin_only
 ON public.contributions

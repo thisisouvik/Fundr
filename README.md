@@ -137,31 +137,31 @@ Fundr/
 ### User Workflow
 ```mermaid
 graph TD;
-    A[Visitor] -->|Signs Up| B(Account Created);
+    A[Visitor] -->|Signs Up| B["Account Created"];
     B --> C{User Role};
-    C -->|Backer| D[Browse Campaigns];
-    D --> E[Connect Freighter Wallet];
-    E --> F[Pledge XLM via Contract];
+    C -->|Backer| D["Browse Campaigns"];
+    D --> E["Connect Freighter Wallet"];
+    E --> F["Pledge XLM via Contract"];
     
-    C -->|Creator| G[Submit KYC];
-    G --> H[Admin Reviews KYC];
-    H -->|Approved| I[Create Campaign Draft];
-    I --> J[Admin Publishes to Chain via Factory];
-    J --> K[Campaign is Live];
+    C -->|Creator| G["Submit KYC"];
+    G --> H["Admin Reviews KYC"];
+    H -->|Approved| I["Create Campaign Draft"];
+    I --> J["Admin Publishes to Chain via Factory"];
+    J --> K["Campaign is Live"];
     
     K --> L{Deadline Reached?};
-    L -->|Goal Met| M[Creator Withdraws XLM (5% Fee)];
-    L -->|Goal Failed| N[Backers Refunded];
+    L -->|Goal Met| M["Creator Withdraws XLM (5% Fee)"];
+    L -->|Goal Failed| N["Backers Refunded"];
 ```
 
 ### Smart Contract Architecture
 ```mermaid
 graph LR;
-    A[Web Client] -->|Calls Factory| B[CrowdfundFactory Contract];
-    B -->|deploy_v2| C[Campaign Contract (Instance)];
-    A -->|Calls pledge()| C;
-    A -->|Calls withdraw()| C;
-    A -->|Calls refund()| C;
+    A["Web Client"] -->|Calls Factory| B["CrowdfundFactory Contract"];
+    B -->|deploy_v2| C["Campaign Contract (Instance)"];
+    A -->|"Calls pledge()"| C;
+    A -->|"Calls withdraw()"| C;
+    A -->|"Calls refund()"| C;
 ```
 
 ---
