@@ -52,7 +52,6 @@ By leveraging **Stellar's Soroban Smart Contracts**, Fundr ensures that backers'
 <br/>
 <img src="./assets/active campaign.png" alt="Active Campaign Details" width="800" />
 <img src="./assets/funder/fund-web.png" alt="Fund Form Web" width="800" />
-<img src="./assets/funder/fund-mob.png" alt="Fund Form Mobile" width="300" />
 <img src="./assets/funder/fund sucess.png" alt="Funding Success" width="800" />
 </details>
 
