@@ -40,24 +40,17 @@ By leveraging **Stellar's Soroban Smart Contracts**, Fundr ensures that backers'
 
 ## 📸 Screenshots
 
-<details>
-<summary><b>Landing & Public Pages</b></summary>
-<br/>
-<img src="./assets/landing.png" alt="Landing Page Web" width="800" />
-<img src="./assets/landing-mob.png" alt="Landing Page Mobile" width="300" />
-</details>
+### Web Screens
 
-<details>
-<summary><b>Backer / Funder Experience</b></summary>
-<br/>
+#### Landing & Public Pages
+<img src="./assets/landing.png" alt="Landing Page Web" width="800" />
+
+#### Backer / Funder Experience
 <img src="./assets/active campaign.png" alt="Active Campaign Details" width="800" />
 <img src="./assets/funder/fund-web.png" alt="Fund Form Web" width="800" />
 <img src="./assets/funder/fund sucess.png" alt="Funding Success" width="800" />
-</details>
 
-<details>
-<summary><b>Creator Dashboard</b></summary>
-<br/>
+#### Creator Dashboard
 <img src="./assets/creator/creator dashboard.png" alt="Creator Dashboard" width="800" />
 <img src="./assets/creator/create-form.png" alt="Create Campaign Form" width="800" />
 <img src="./assets/creator/manage campaign first.png" alt="Manage Campaigns" width="800" />
@@ -65,15 +58,16 @@ By leveraging **Stellar's Soroban Smart Contracts**, Fundr ensures that backers'
 <img src="./assets/creator/campaign performance.png" alt="Campaign Performance" width="800" />
 <img src="./assets/creator/funraised-history.png" alt="Fundraised History" width="800" />
 <img src="./assets/creator/profile-settings.png" alt="Profile Settings" width="800" />
-</details>
 
-<details>
-<summary><b>Admin Panel</b></summary>
-<br/>
+#### Admin Panel
 <img src="./assets/admin/admin's home.png" alt="Admin Home" width="800" />
 <img src="./assets/admin/admin-kyc-review.png" alt="Admin KYC Review" width="800" />
 <img src="./assets/admin/campaign moderation.png" alt="Admin Campaign Moderation" width="800" />
-</details>
+
+### Mobile Screens
+
+<img src="./assets/landing-mob.png" alt="Landing Page Mobile" width="300" />
+<img src="./assets/funder/fund-mob.png" alt="Fund Form Mobile" width="300" />
 
 ---
 
@@ -199,6 +193,7 @@ The platform's critical functionality is thoroughly tested via automated Node E2
 
 ### Smart Contract Test Verification
 ![Contract Tests](./assets/contracts-test.png)
+![Contract Tests 2](./assets/contracts-test2.png)
 
 ### Frontend E2E Route Verification
 ![E2E Tests](./assets/e2e%20test.png)
@@ -224,6 +219,7 @@ The platform's critical functionality is thoroughly tested via automated Node E2
 | **Level 3** | Application live on Vercel | ✅ |
 | **Submission** | Complete README with architecture | ✅ |
 | **Submission** | Contract addresses documented with Tx links | ✅ |
+| **Submission** | Contracts test done and added | ✅ |
 
 ---
 
