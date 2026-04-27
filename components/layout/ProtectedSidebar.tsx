@@ -6,8 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { FundraiserKycRow, ProfileRow } from "@/types/supabase";
-import Image from "next/image";
-
 
 interface NavItem {
   label: string;
@@ -17,7 +15,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Home", href: "/dashboard" },
   { label: "Create Campaign", href: "/fundraising" },
-  { label: "Manage Campaigns", href: "/my-campaigns" },
   { label: "Campaign Performance", href: "/dashboard/performance" },
   { label: "Fundraised History", href: "/history" },
   { label: "Profile and Settings", href: "/settings" },
@@ -39,7 +36,7 @@ export function ProtectedSidebar() {
     }
 
     return [
-      { label: "Admin's Home", href: "/admin" },
+      { label: "Admin Panel", href: "/admin" },
       { label: "KYC Review", href: "/admin/kyc" },
       { label: "Campaign Moderation", href: "/admin/campaigns" },
       { label: "Settings", href: "/settings" },
@@ -118,12 +115,12 @@ export function ProtectedSidebar() {
 
   const statusClassName =
     statusTone === "success"
-      ? "text-emerald-700 bg-emerald-50/50"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : statusTone === "info"
-        ? "text-sky-700 bg-sky-50/50"
+        ? "border-sky-200 bg-sky-50 text-sky-700"
         : statusTone === "danger"
-          ? "text-red-700 bg-red-50/50"
-          : "text-[var(--muted)] bg-[var(--surface-soft)]";
+          ? "border-red-200 bg-red-50 text-red-700"
+          : "border-[var(--line)] bg-[var(--surface-soft)] text-[var(--muted)]";
 
   const handleSignOut = async () => {
     await signOut();
@@ -134,14 +131,13 @@ export function ProtectedSidebar() {
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
       <div className="mb-4 border-b border-[var(--line)] pb-4">
-        <Link href="/dashboard" className="flex items-center gap-2 text-2xl font-bold tracking-tight text-[var(--brand)]">
-          <Image src="/icon.png" alt="Fundr Logo" width={32} height={32} className="h-8 w-8" priority />
-          <span>Fundr</span>
+        <Link href="/dashboard" className="text-2xl font-bold tracking-tight text-[var(--brand)]">
+          Fundr
         </Link>
         <p className="mt-1 text-sm text-[var(--muted)]">{isAdmin ? "Admin workspace" : "Creator workspace"}</p>
         <Link
           href={isAdmin ? "/admin" : "/settings"}
-          className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusClassName}`}
+          className={`mt-3 block rounded-xl border px-3 py-2 text-xs font-semibold ${statusClassName}`}
         >
           {isStatusLoading ? "KYC: checking status..." : statusLabel}
         </Link>
@@ -149,11 +145,8 @@ export function ProtectedSidebar() {
 
       <nav aria-label="Protected navigation" className="space-y-2">
         {links.map((item) => {
-          const isActive =
-            item.href === "/dashboard" || item.href === "/admin"
-              ? pathname === item.href
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const kycLockedRoutes = ["/fundraising", "/my-campaigns", "/dashboard/performance", "/history"];
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const kycLockedRoutes = ["/fundraising", "/dashboard/performance", "/history"];
           const isKycLockedRoute = kycLockedRoutes.includes(item.href);
           const isKycLocked = isKycLockedRoute && !hasCreatorAccess;
           const baseClass = isActive
