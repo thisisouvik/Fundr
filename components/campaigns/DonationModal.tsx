@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { DonationReceipt } from "@/components/campaigns/DonationReceipt";
 import type { CampaignRow } from "@/types/supabase";
-import { isConnected, isAllowed, getAddress, signTransaction } from "@stellar/freighter-api";
-import { rpc, Contract, Address, nativeToScVal, TransactionBuilder, Transaction } from "@stellar/stellar-sdk";
-import { getRpcServer, getNetworkPassphrase, waitForSorobanTx } from "@/lib/stellar/soroban";
+import { Contract, Address, nativeToScVal } from "@stellar/stellar-sdk";
 import { saveContribution } from "@/app/campaigns/[slug]/actions";
+import { useSorobanIntegration } from "@/hooks/useSorobanIntegration";
 
 interface DonationModalProps {
   campaign: CampaignRow;
@@ -19,7 +18,7 @@ export function DonationModal({ campaign, onClose }: DonationModalProps) {
   const [amount, setAmount] = useState("1");
   const [donorName, setDonorName] = useState("");
   const [donorMessage, setDonorMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { submitTransaction, isSubmitting } = useSorobanIntegration();
   const [txHash, setTxHash] = useState<string | null>(null);
 
   const handleAnonymousDonate = () => {
@@ -49,75 +48,25 @@ export function DonationModal({ campaign, onClose }: DonationModalProps) {
   };
 
   const handleConfirmDonate = async () => {
-    setIsSubmitting(true);
-    
     try {
-      if (!(await isConnected())) {
-        alert("Freighter is not installed.");
-        setIsSubmitting(false);
-        return;
-      }
-      if (!(await isAllowed())) {
-        alert("Please authorize Fundr in Freighter.");
-        setIsSubmitting(false);
-        return;
-      }
-      const donorPubKeyObj = await getAddress();
-      if (!donorPubKeyObj || !donorPubKeyObj.address) {
-         alert("Could not get wallet address.");
-         setIsSubmitting(false);
-         return;
-      }
-      const donorPubKey = donorPubKeyObj.address;
-
-      // Use shared helpers — standard Contract class-based interaction
-      const server = getRpcServer();
-      const networkPassphrase = getNetworkPassphrase();
-
-      const donorAccount = await server.getAccount(donorPubKey);
       const contractId = campaign.contract_address;
       if (!contractId) throw new Error("Campaign has no contract address");
       const contract = new Contract(contractId);
 
       const amountStroops = BigInt(Math.round(Number(amount) * 10_000_000));
 
-      const tx = new TransactionBuilder(donorAccount, {
-        fee: "10000",
-        networkPassphrase,
-      })
-        .addOperation(
-          contract.call(
-            "pledge",
-            new Address(donorPubKey).toScVal(),
-            nativeToScVal(amountStroops, { type: "i128" })
-          )
-        )
-        .setTimeout(300)
-        .build();
-
-      const sim = await server.simulateTransaction(tx);
-      if (rpc.Api.isSimulationError(sim)) {
-         throw new Error("Simulation failed: " + (typeof sim.error === "string" ? sim.error : "unknown error"));
-      }
-
-      const prepared = rpc.assembleTransaction(tx, sim).build();
-
-      const signedXdr = await signTransaction(prepared.toXDR(), { networkPassphrase });
+      const { hash: newTxHash, walletAddress: donorPubKey } = await submitTransaction({
+        buildOperations: (walletAddress) => {
+          return [
+            contract.call(
+              "pledge",
+              new Address(walletAddress).toScVal(),
+              nativeToScVal(amountStroops, { type: "i128" })
+            )
+          ];
+        }
+      });
       
-      if (signedXdr.error) {
-        throw new Error(signedXdr.error);
-      }
-
-      const signedTx = new Transaction(signedXdr.signedTxXdr, networkPassphrase);
-
-      const send = await server.sendTransaction(signedTx);
-      if (send.status !== "PENDING" && send.status !== "DUPLICATE") {
-         throw new Error("Failed to send: " + send.status);
-      }
-
-      // Wait for confirmation using SDK server.getTransaction() — no raw fetch
-      const txHash = send.hash;
-      await waitForSorobanTx(server, txHash);
       await saveContribution({
         campaign_id: campaign.id,
         wallet_address: donorPubKey,
@@ -125,15 +74,14 @@ export function DonationModal({ campaign, onClose }: DonationModalProps) {
         donor_name: isAnonymous ? undefined : donorName,
         donor_message: isAnonymous ? undefined : donorMessage,
         is_anonymous: isAnonymous,
-        tx_hash: txHash,
+        tx_hash: newTxHash,
       });
 
-      setTxHash(txHash);
+      setTxHash(newTxHash);
       setStep("success");
     } catch (err: any) {
       console.error(err);
       alert("Donation failed: " + (err.message || "Unknown error"));
-      setIsSubmitting(false);
     }
   };
 
