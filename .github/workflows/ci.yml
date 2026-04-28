@@ -7,8 +7,9 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  build:
-    name: Build & Lint
+  # Job 1: Test, Lint & Quality Check
+  quality-check:
+    name: Test, Lint & Quality Check
     runs-on: ubuntu-latest
 
     steps:
@@ -18,21 +19,66 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # LTS version
+          node-version: '20'
           cache: 'npm'
 
-      - name: Install Dependencies
+      - name: Install Node Dependencies
         run: npm ci
 
-      - name: Run Linter
+      - name: Run ESLint
         run: npm run lint
 
-      - name: Type Check & Build
+      - name: Run TypeScript Type Check
+        run: npx tsc --noEmit
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright E2E Tests
+        run: npm run test:e2e
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            contracts/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('contracts/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run Contract Tests
+        working-directory: ./contracts
+        run: cargo test
+
+  # Job 2: Build Application & Contracts
+  build:
+    name: Build Application & Contracts
+    runs-on: ubuntu-latest
+    needs: quality-check
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Build Next.js Application
         run: npm run build
         env:
-          # Next.js requires NEXT_PUBLIC variables at build time. 
-          # You can define real ones in GitHub Actions Secrets.
-          # These are fallbacks to ensure the build doesn't crash.
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NEXT_PUBLIC_SUPABASE_URL: https://mock.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-key
@@ -43,17 +89,61 @@ jobs:
           NEXT_PUBLIC_CAMPAIGN_CONTRACT_ID: mock-contract
           NEXT_PUBLIC_ADMIN_WALLET_ID: mock-admin-wallet
 
-  # Optional: Uncomment below to run Playwright E2E tests
-  # e2e-tests:
-  #   name: Playwright Tests
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         cache: 'npm'
-  #     - run: npm ci
-  #     - run: npx playwright install --with-deps
-  #     - run: npm run test:e2e
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            contracts/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('contracts/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build Contracts (WASM)
+        working-directory: ./contracts
+        run: cargo build --target wasm32-unknown-unknown --release
+
+      - name: Upload WASM Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-contracts
+          path: contracts/target/wasm32-unknown-unknown/release/*.wasm
+          retention-days: 5
+
+  # Job 3: Validate Smart Contracts
+  contract-validation:
+    name: Validate Smart Contracts
+    runs-on: ubuntu-latest
+    needs: quality-check
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            contracts/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('contracts/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run Clippy Linter
+        working-directory: ./contracts
+        # Using wasm32-unknown-unknown for standard Soroban compilation target
+        run: cargo clippy --target wasm32-unknown-unknown --release --lib -- -D warnings
