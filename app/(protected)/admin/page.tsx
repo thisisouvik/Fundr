@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import { requireAdminPanelAccess } from "@/lib/auth/admin";
 

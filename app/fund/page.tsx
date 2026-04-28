@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { createClient } from "@/lib/supabase/server";
 import WalletWidget from "@/components/wallet/WalletCard";
 import { FundForm, CampaignOption } from "@/components/fund/FundForm";
