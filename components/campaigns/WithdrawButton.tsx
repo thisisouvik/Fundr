@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { isConnected, isAllowed, getAddress, signTransaction } from "@stellar/freighter-api";
-import { rpc, Contract, TransactionBuilder, Transaction, Operation, Asset } from "@stellar/stellar-sdk";
-import { getRpcServer, getNetworkPassphrase, waitForSorobanTx } from "@/lib/stellar/soroban";
+import { Contract, Operation, Asset } from "@stellar/stellar-sdk";
 import { VerifyOnChain } from "@/components/ui/VerifyOnChain";
+import { useSorobanIntegration } from "@/hooks/useSorobanIntegration";
 
 interface WithdrawButtonProps {
   contractId: string;
@@ -12,39 +11,14 @@ interface WithdrawButtonProps {
 }
 
 export function WithdrawButton({ contractId, deadline }: WithdrawButtonProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { submitTransaction, isSubmitting } = useSorobanIntegration();
   const [txHash, setTxHash] = useState<string | null>(null);
   const [withdrawnAmount, setWithdrawnAmount] = useState<number | null>(null);
 
   const isPastDeadline = new Date().getTime() > new Date(deadline).getTime();
 
   const handleWithdraw = async () => {
-    setIsSubmitting(true);
-
     try {
-      if (!(await isConnected())) {
-        alert("Freighter is not installed.");
-        setIsSubmitting(false);
-        return;
-      }
-      if (!(await isAllowed())) {
-        alert("Please authorize Fundr in Freighter.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      const walletAddressObj = await getAddress();
-      if (!walletAddressObj || !walletAddressObj.address) {
-        alert("Could not get wallet address.");
-        setIsSubmitting(false);
-        return;
-      }
-      const creatorAddress = walletAddressObj.address;
-
-      // Use shared helpers — standard Contract class-based interaction
-      const server = getRpcServer();
-      const networkPassphrase = getNetworkPassphrase();
-      const creatorAccount = await server.getAccount(creatorAddress);
       const contract = new Contract(contractId);
 
       // Fetch contract XLM balance via Horizon to calculate the 5% platform fee
@@ -75,47 +49,18 @@ export function WithdrawButton({ contractId, deadline }: WithdrawButtonProps) {
       const feeString = feeAmount.toFixed(7);
       const netAmount = contractBalance - feeAmount;
 
-      // Build: Op 1 = contract.call("withdraw"), Op 2 = payment of fee to admin
-      const tx = new TransactionBuilder(creatorAccount, {
-        fee: "10000",
-        networkPassphrase,
-      })
-        .addOperation(contract.call("withdraw"))
-        .addOperation(
-          Operation.payment({
-            destination: adminWallet,
-            asset: Asset.native(),
-            amount: feeString,
-          })
-        )
-        .setTimeout(300)
-        .build();
-
-      const sim = await server.simulateTransaction(tx);
-      if (rpc.Api.isSimulationError(sim)) {
-        throw new Error(
-          "Simulation failed. Make sure the deadline has passed and the goal is met! " +
-            (typeof sim.error === "string" ? sim.error : "")
-        );
-      }
-
-      const prepared = rpc.assembleTransaction(tx, sim).build();
-      const signedXdr = await signTransaction(prepared.toXDR(), { networkPassphrase });
-
-      if (signedXdr.error) {
-        throw new Error(signedXdr.error);
-      }
-
-      const signedTx = new Transaction(signedXdr.signedTxXdr, networkPassphrase);
-      const send = await server.sendTransaction(signedTx);
-
-      if (send.status !== "PENDING" && send.status !== "DUPLICATE") {
-        throw new Error("Failed to send: " + send.status);
-      }
-
-      // SDK-based polling — no raw fetch
-      const hash = send.hash;
-      await waitForSorobanTx(server, hash);
+      const { hash } = await submitTransaction({
+        buildOperations: () => {
+          return [
+            contract.call("withdraw"),
+            Operation.payment({
+              destination: adminWallet,
+              asset: Asset.native(),
+              amount: feeString,
+            })
+          ];
+        }
+      });
 
       // Flip into success state
       setTxHash(hash);
@@ -123,8 +68,6 @@ export function WithdrawButton({ contractId, deadline }: WithdrawButtonProps) {
     } catch (err: any) {
       console.error(err);
       alert("Withdrawal failed: " + (err.message || "Unknown error"));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

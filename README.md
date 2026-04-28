@@ -117,6 +117,8 @@ Fundr/
 ├── contracts/                # Rust Smart Contracts
 │   ├── campaign/             # Escrow and logic for individual campaigns
 │   └── crowdfund-factory/    # Factory for dynamic campaign deployment
+├── hooks/                    # Custom React Hooks
+│   └── useSorobanIntegration.ts # Modularized Freighter and smart contract integration logic
 ├── lib/                      # Utilities and Integrations
 │   └── stellar/              # Soroban SDK, Freighter wallet, and RPC wrappers
 ├── sql/                      # Supabase Database Migrations & RLS Policies
@@ -166,6 +168,7 @@ graph LR;
 | :--- | :--- | :--- |
 | **Frontend** | **Multi-Role Dashboards** | Distinct, secure routing and UI for Backers, Creators, and Admins. |
 | **Frontend** | **Real-time Metrics** | Aggregates on-chain contributions and displays dynamic progress bars. |
+| **Frontend** | **Modular Hooks** | Extracted Stellar and Freighter integrations into highly reusable React hooks (e.g. `useSorobanIntegration`). |
 | **Backend** | **Admin KYC & Moderation** | Immutable KYC application flow with admin approval gates. |
 | **Backend** | **Row Level Security (RLS)** | Strict PostgreSQL policies ensuring users can only modify their own data. |
 | **Contract** | **Factory Deployment** | Uses `deploy_v2` to spawn isolated contract state for every single campaign. |

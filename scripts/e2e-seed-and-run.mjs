@@ -1,6 +1,3 @@
-import fs from "fs";
-import path from "path";
-
 // A simple E2E verification script that mimics the TrustLend test output
 // Checks that all public routes are accessible (200) and protected routes redirect correctly (307)
 
@@ -41,7 +38,7 @@ async function runTests() {
         console.log(`\x1b[31mFAIL\x1b[0m  | ${route.name.padEnd(30)} | status=${response.status} (expected ${route.expected})`);
         failed++;
       }
-    } catch (err) {
+    } catch {
        console.log(`\x1b[31mFAIL\x1b[0m  | ${route.name.padEnd(30)} | NETWORK ERROR`);
        failed++;
     }
