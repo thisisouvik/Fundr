@@ -28,14 +28,15 @@
 
 **Fundr** is a next-generation decentralized crowdfunding platform designed to eliminate fraud, guarantee fund delivery, and provide unmatched transparency for charitable causes, startup ideas, and community projects.
 
-By leveraging **Stellar's Soroban Smart Contracts**, Fundr ensures that backers' funds are held safely in a programmatic escrow and are only released to campaign creators if their funding goals are met. If a campaign fails to reach its goal by the deadline, backers can instantly withdraw their pledges, completely eliminating platform exit scams and traditional banking hold-ups.
+By leveraging **Stellar's Soroban Smart Contracts**, Fundr ensures that backers' funds are held safely in a programmatic escrow and are released to campaign creators in milestone-based tranches after a successful campaign. If a campaign fails to reach its goal by the deadline, backers can instantly withdraw their pledges, completely eliminating platform exit scams and traditional banking hold-ups.
 
 ### 🛡️ Impact, Security, and Transparency
 *   **Trustless Escrow:** Funds are never held by an intermediary. They are secured directly within an on-chain smart contract.
 *   **Guaranteed Refunds:** If a campaign misses its funding target, smart contract logic guarantees that backers can easily retrieve their XLM. No manual processing or chargebacks required.
 *   **Immutable Goal Enforcement:** Campaign creators cannot alter their funding targets or deadlines once the campaign is deployed on-chain.
+*   **Milestone-Based Fund Release:** Successful campaigns no longer release 100% immediately. The creator receives an initial 30% tranche, then backers vote on milestone proof before the next 35% and final 35% are released.
+*   **Backer Voting:** Milestone approval is pledge-weighted and enforced by the smart contract. Only real backers can vote, and each backer can vote once per milestone.
 *   **KYC Identity Verification:** Creators undergo strict admin-approved KYC (Know Your Customer) reviews before they are permitted to deploy campaigns, protecting the platform from anonymous bad actors.
-*   **Platform Sustainability:** A built-in 5% maintenance fee is automatically and transparently routed to the platform administrators during a successful withdrawal, aligning platform success with creator success.
 
 ---
 
@@ -87,14 +88,67 @@ By leveraging **Stellar's Soroban Smart Contracts**, Fundr ensures that backers'
 
 ## 🔗 Smart Contracts Deployed (Stellar Testnet)
 
-The platform utilizes a Factory pattern to dynamically spawn isolated escrow contracts for each campaign.
+The platform utilizes a Factory pattern to dynamically spawn isolated escrow contracts for each campaign. The latest Testnet deployment includes the milestone-based campaign WASM that supports tranche release and backer voting.
 
-| Contract Name | Contract ID (Testnet) | Verification Link |
-| :--- | :--- | :--- |
-| **Crowdfund Factory** | `CBCEVQXYDJXFW6PLP4BDHXBDSR7HPU6YBV6LPSGNKLLX2BKUV35PYTMU` | [Verify on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CBCEVQXYDJXFW6PLP4BDHXBDSR7HPU6YBV6LPSGNKLLX2BKUV35PYTMU) |
-| **Campaign Template** (Sample) | `CCJLG4SZUMZGZLOMVWFCPSB4BIPH6A2ZJBGFDEV6VABDWCNXWXNH37A7` | [Verify on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CCJLG4SZUMZGZLOMVWFCPSB4BIPH6A2ZJBGFDEV6VABDWCNXWXNH37A7) |
+### Latest Testnet Deployment
 
-*You can verify these addresses on [Stellar Expert Testnet](https://stellar.expert/explorer/testnet).*
+| Item | Value |
+| :--- | :--- |
+| **Network** | Stellar Testnet |
+| **Crowdfund Factory Contract ID** | `CCS6ECPIBP73QZNWWTE3BSMVJOVUTTG2VT5WDLBO3PNYI4BUTHQEKP7J` |
+| **Campaign WASM Hash** | `0ceeeab6ecc69acb0018b49896f66b3a3c36ee6eba7a8b0d76b860b3d7932e75` |
+| **Factory Deploy Transaction** | `849922114536ac6b83173f297a0219b611bc1fe304ef98888f3c47bd968ce41b` |
+| **Deployer Wallet** | `GDRHEIIOD4PZ4CQEZN5QLMZTVA5QEZWX2OBSQMVSFLYICDJH3FXLKX3Y` |
+
+Verification links:
+
+*   [Verify latest factory contract on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CCS6ECPIBP73QZNWWTE3BSMVJOVUTTG2VT5WDLBO3PNYI4BUTHQEKP7J)
+*   [Verify deployment transaction on Stellar Expert](https://stellar.expert/explorer/testnet/tx/849922114536ac6b83173f297a0219b611bc1fe304ef98888f3c47bd968ce41b)
+
+Latest campaign WASM exported functions:
+
+```text
+get_milestone_state
+get_state
+init
+pledge
+refund
+release_milestone_funds
+vote_milestone
+withdraw
+```
+
+Important deployment note: existing campaign contracts already deployed before this upgrade still use their original on-chain logic. New campaigns created through the latest factory use the milestone-based campaign WASM above.
+
+Health check note: the deployment completed successfully and the contract-live, `get_campaign`, `create_campaign` ABI, and Horizon checks passed. One RPC reachability probe returned a response-shape parsing warning in the local health-check script.
+
+---
+
+## Latest Changes
+
+The latest update replaces the old full-withdrawal model with milestone-based fund release:
+
+*   `withdraw()` now releases only the first 30% tranche after a successful campaign.
+*   `vote_milestone(backer, milestone, approve)` lets backers approve or reject milestone 1 and milestone 2.
+*   `release_milestone_funds()` releases the next eligible tranche:
+    *   first call releases 30%;
+    *   after milestone 1 approval, the next call releases 35%;
+    *   after milestone 2 approval, the final call releases the remaining 35%.
+*   `milestone_1_completed` and `milestone_2_completed` are stored on-chain.
+*   `get_milestone_state()` exposes milestone completion and yes-vote totals.
+*   The creator dashboard now shows "Release Next Tranche" instead of full withdrawal.
+*   Public campaign pages now include milestone voting controls for ended, fully funded campaigns.
+
+Verification completed after this update:
+
+```bash
+npm run lint
+npm run build
+cargo test -p campaign
+npm run deploy:stellar
+```
+
+Result: frontend lint passed, production build passed, campaign contract tests passed (`13 passed`), and the latest milestone contract WASM was deployed to Stellar Testnet.
 
 ---
 
@@ -146,7 +200,12 @@ graph TD;
     J --> K["Campaign is Live"];
     
     K --> L{Deadline Reached?};
-    L -->|Goal Met| M["Creator Withdraws XLM (5% Fee)"];
+    L -->|Goal Met| M["Creator Releases First 30% Tranche"];
+    M --> O["Creator Submits Milestone Proof"];
+    O --> P["Backers Vote on Milestone"];
+    P -->|Approved| Q["Next 35% Released"];
+    Q --> R["Final Milestone Vote"];
+    R -->|Approved| S["Remaining 35% Released"];
     L -->|Goal Failed| N["Backers Refunded"];
 ```
 
@@ -156,7 +215,9 @@ graph LR;
     A["Web Client"] -->|Calls Factory| B["CrowdfundFactory Contract"];
     B -->|deploy_v2| C["Campaign Contract (Instance)"];
     A -->|"Calls pledge()"| C;
-    A -->|"Calls withdraw()"| C;
+    A -->|"Calls withdraw() for first 30%"| C;
+    A -->|"Calls vote_milestone()"| C;
+    A -->|"Calls release_milestone_funds()"| C;
     A -->|"Calls refund()"| C;
 ```
 
@@ -173,8 +234,40 @@ graph LR;
 | **Backend** | **Row Level Security (RLS)** | Strict PostgreSQL policies ensuring users can only modify their own data. |
 | **Contract** | **Factory Deployment** | Uses `deploy_v2` to spawn isolated contract state for every single campaign. |
 | **Contract** | **Trustless Escrow** | Smart contract securely holds XLM without central authority intervention. |
-| **Contract** | **Conditional Withdrawals** | Creators can only withdraw if `pledged >= goal` and the deadline has passed. |
-| **Contract** | **Platform Fee Routing** | Hardcoded 5% network maintenance fee sent to the admin wallet on withdrawal. |
+| **Contract** | **Milestone-Based Release** | Successful campaigns release 30% first, 35% after milestone 1 approval, and the remaining 35% after milestone 2 approval. |
+| **Contract** | **Backer Voting** | `vote_milestone()` allows only real backers to vote once per milestone, with voting power based on pledge amount. |
+| **Contract** | **Conditional Releases** | Creators can only release funds if `pledged >= goal`, the deadline has passed, and milestone approvals are satisfied. |
+
+---
+
+## 🐳 Docker
+
+Use the included multi-stage image for local runs. For safety, keep secrets in `.env.local` and never commit that file.
+
+1. Start from the template:
+
+```bash
+cp .env.example .env.local
+```
+
+2. Fill in the values you need in `.env.local`.
+
+3. Start the app:
+
+```bash
+docker compose up --build
+```
+
+The app will be available on [http://localhost:3000](http://localhost:3000). The compose file loads `.env.local`, so any Supabase or Stellar variables you already use locally will be passed into the container.
+
+If you prefer a raw image build, use:
+
+```bash
+docker build -t fundr .
+docker run --rm -p 3000:3000 --env-file .env.local fundr
+```
+
+If you are sharing the project, commit only `.env.example`, not `.env.local` or any other local env file.
 
 ---
 
@@ -185,8 +278,11 @@ graph LR;
 | **Wallet Not Installed** | Frontend Guard | "Freighter is not installed. Please install the extension." |
 | **User rejects transaction** | Wallet Provider | Graceful catch displaying "Transaction rejected by user." |
 | **Funding an expired campaign** | Smart Contract | Contract panics: `"campaign closed"`, bubbled up to UI. |
-| **Withdrawing before deadline** | Smart Contract | Contract panics: `"campaign still active"`. |
-| **Withdrawing below goal** | Smart Contract | Contract panics: `"goal not met, cannot withdraw"`. |
+| **Releasing before deadline** | Smart Contract | Contract panics: `"campaign still active"`. |
+| **Releasing below goal** | Smart Contract | Contract panics: `"goal not met, cannot withdraw"`. |
+| **Milestone release without approval** | Smart Contract | Contract panics: `"milestone not approved"`. |
+| **Duplicate milestone vote** | Smart Contract | Contract panics: `"backer already voted"`. |
+| **Non-backer milestone vote** | Smart Contract | Contract panics: `"only backers can vote"`. |
 | **Invalid form inputs** | Server Actions / Zod | Inline red text displaying exact validation errors. |
 
 ---
@@ -204,28 +300,6 @@ The platform's critical functionality is thoroughly tested via automated Node E2
 
 ---
 
-## ✅ Submission Verification Checklist
-
-| Level | Criteria | Status |
-| :--- | :--- | :---: |
-| **Level 1** | Wallet connect / disconnect | ✅ |
-| **Level 1** | Balance display | ✅ |
-| **Level 1** | Send XLM transaction | ✅ |
-| **Level 1** | Transaction feedback | ✅ |
-| **Level 1** | 3+ error types handled | ✅ |
-| **Level 2** | Smart contracts deployed on Testnet | ✅ |
-| **Level 2** | Contract calls working (Factory, Pledging, Withdrawal, Refund) | ✅ |
-| **Level 2** | Multi-wallet support (Freighter) | ✅ |
-| **Level 2** | Real-time on-chain status | ✅ |
-| **Level 3** | Inter-contract calls (Factory → Campaign `deploy_v2`) | ✅ |
-| **Level 3** | E2E route & contract tests passing | ✅ |
-| **Level 3** | Mobile responsive | ✅ |
-| **Level 3** | Application live on Vercel | ✅ |
-| **Submission** | Complete README with architecture | ✅ |
-| **Submission** | Contract addresses documented with Tx links | ✅ |
-| **Submission** | Contracts test done and added | ✅ |
-
----
 
 ## 🛠️ Project Setup Guide
 
