@@ -1,0 +1,12 @@
+.git
+.github
+.next
+node_modules
+playwright-report
+test-results
+tsconfig.tsbuildinfo
+.env.local
+.env.*.local
+npm-debug.log*
+Dockerfile
+docker-compose.yml
