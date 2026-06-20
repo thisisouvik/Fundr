@@ -8,6 +8,7 @@ import { CampaignImageCarousel } from "@/components/campaigns/CampaignImageCarou
 import { DonationPanel } from "@/components/campaigns/DonationPanel";
 import { RecentDonors } from "@/components/campaigns/RecentDonors";
 import { CommentsSection } from "@/components/campaigns/CommentsSection";
+import { MilestoneVotePanel } from "@/components/campaigns/MilestoneVotePanel";
 import { VerifyOnChain } from "@/components/ui/VerifyOnChain";
 
 
@@ -60,6 +61,7 @@ export default async function CampaignDetailPage({
   const daysLeft = Math.ceil(
     (new Date(campaign.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
   );
+  const canVoteOnMilestones = Boolean(campaign.contract_address) && progress >= 100 && daysLeft <= 0;
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -124,6 +126,13 @@ export default async function CampaignDetailPage({
 
             {/* Recent Donors */}
             <RecentDonors campaignId={campaign.id} />
+
+            {campaign.contract_address ? (
+              <MilestoneVotePanel
+                contractId={campaign.contract_address}
+                canVote={canVoteOnMilestones}
+              />
+            ) : null}
 
             {/* Comments Section */}
             <CommentsSection campaignId={campaign.id} />

@@ -99,7 +99,6 @@
         }
       ]
     ],
-    [],
     [
       [
         "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
@@ -107,7 +106,7 @@
           "function": {
             "contract_fn": {
               "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM",
-              "function_name": "withdraw",
+              "function_name": "release_milestone_funds",
               "args": []
             }
           },
@@ -115,8 +114,6 @@
         }
       ]
     ],
-    [],
-    [],
     []
   ],
   "ledger": {
