@@ -257,6 +257,87 @@ impl Campaign {
         panic!("all milestone funds released");
     }
 
+    pub fn attempt_release_milestone_funds(env: Env) -> i128 {
+        let creator = env
+            .storage()
+            .instance()
+            .get::<_, Address>(&CREATOR)
+            .unwrap();
+        creator.require_auth();
+
+        let deadline_ts = env.storage().instance().get::<_, u64>(&DEADLINE).unwrap();
+        let goal = env.storage().instance().get::<_, i128>(&GOAL).unwrap();
+        let pledged = env
+            .storage()
+            .instance()
+            .get::<_, i128>(&TOTAL_PLEDGED)
+            .unwrap_or(0);
+
+        let first_released = env
+            .storage()
+            .instance()
+            .get::<_, bool>(&FIRST_RELEASED)
+            .unwrap_or(false);
+        let milestone_1_completed = env
+            .storage()
+            .instance()
+            .get::<_, bool>(&MILESTONE_1_COMPLETED)
+            .unwrap_or(false);
+        let milestone_2_completed = env
+            .storage()
+            .instance()
+            .get::<_, bool>(&MILESTONE_2_COMPLETED)
+            .unwrap_or(false);
+
+        let can_release = if env.ledger().timestamp() <= deadline_ts || pledged < goal {
+            false
+        } else if !first_released {
+            true
+        } else if !milestone_1_completed {
+            let yes_votes = env
+                .storage()
+                .instance()
+                .get::<_, i128>(&MILESTONE_1_YES)
+                .unwrap_or(0);
+            yes_votes * 100 >= pledged * APPROVAL_PERCENT
+        } else if !milestone_2_completed {
+            let yes_votes = env
+                .storage()
+                .instance()
+                .get::<_, i128>(&MILESTONE_2_YES)
+                .unwrap_or(0);
+            yes_votes * 100 >= pledged * APPROVAL_PERCENT
+        } else {
+            false
+        };
+
+        if !can_release {
+            apply_creator_reputation_delta(&env, &creator, FAILED_WITHDRAWAL_PENALTY);
+            return 0;
+        }
+
+        if !first_released {
+            let amount = release_percent(&env, FIRST_TRANCHE_PERCENT, pledged);
+            env.storage().instance().set(&FIRST_RELEASED, &true);
+            maybe_award_success_bonus(&env, &creator, amount);
+            return amount;
+        }
+
+        if !milestone_1_completed {
+            let amount = release_percent(&env, SECOND_TRANCHE_PERCENT, pledged);
+            env.storage().instance().set(&MILESTONE_1_COMPLETED, &true);
+            return amount;
+        }
+
+        if !milestone_2_completed {
+            let amount = release_remaining(&env);
+            env.storage().instance().set(&MILESTONE_2_COMPLETED, &true);
+            return amount;
+        }
+
+        0
+    }
+
     pub fn refund(env: Env, backer: Address) {
         let deadline_ts = env.storage().instance().get::<_, u64>(&DEADLINE).unwrap();
         if env.ledger().timestamp() <= deadline_ts {
@@ -779,6 +860,18 @@ mod tests {
 
         client.vote_milestone(&backer, &1_u32, &true);
         client.vote_milestone(&backer, &1_u32, &true);
+    }
+
+    #[test]
+    fn test_failed_release_attempt_penalizes_creator() {
+        let (env, client, creator, backer, _token) = setup();
+
+        client.pledge(&backer, &100_0000000_i128);
+
+        let released = client.attempt_release_milestone_funds();
+        assert_eq!(released, 0_i128);
+        assert_eq!(client.get_creator_reputation(&creator), 85_i128);
+        let _ = env;
     }
 
     #[test]
