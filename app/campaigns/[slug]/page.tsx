@@ -10,6 +10,7 @@ import { RecentDonors } from "@/components/campaigns/RecentDonors";
 import { CommentsSection } from "@/components/campaigns/CommentsSection";
 import { MilestoneVotePanel } from "@/components/campaigns/MilestoneVotePanel";
 import { VerifyOnChain } from "@/components/ui/VerifyOnChain";
+import { getCreatorReputation } from "@/lib/stellar/reputation";
 
 
 export default async function CampaignDetailPage({
@@ -40,9 +41,13 @@ export default async function CampaignDetailPage({
   // Fetch creator profile
   const { data: creator } = await supabase
     .from("profiles")
-    .select("full_name, username, avatar_url")
+    .select("full_name, username, avatar_url, wallet_address")
     .eq("id", campaign.creator_id)
     .maybeSingle();
+
+  const reputation = creator?.wallet_address && campaign.contract_address
+    ? await getCreatorReputation(campaign.contract_address, creator.wallet_address)
+    : null;
 
   // Fetch contributions for progress
   const { data: contributions = [] } = await supabase
@@ -105,6 +110,18 @@ export default async function CampaignDetailPage({
                 <div className="flex-1">
                   <p className="font-semibold">{creator?.full_name || "Anonymous Creator"}</p>
                   <p className="text-sm text-[var(--muted)]">@{creator?.username || "unknown"}</p>
+                  {reputation ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        Creator Reputation: {reputation.displayScore}/100
+                      </span>
+                      {reputation.trusted ? (
+                        <span className="rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+                          Trusted Creator Badge
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
                 {campaign.contract_address ? (
                   <VerifyOnChain
