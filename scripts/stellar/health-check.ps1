@@ -48,10 +48,18 @@ $allPassed = $true
 
 # Check 1: RPC health
 try {
-    $body = '{"jsonrpc":"2.0","id":1,"method":"getHealth","params":[]}'
+    $body = '{"jsonrpc":"2.0","id":1,"method":"getHealth","params":{}}'
     $resp = Invoke-RestMethod -Uri $RPC_URL -Method Post -ContentType "application/json" -Body $body -ErrorAction Stop
     # result.status == "healthy" in older versions; newer versions may wrap differently
-    $status = if ($resp.result) { $resp.result.status } elseif ($resp.status) { $resp.status } else { "unknown" }
+    $status = "unknown"
+    if ($resp.PSObject.Properties.Name -contains "result") {
+        $result = $resp.result
+        if ($null -ne $result -and $result.PSObject.Properties.Name -contains "status") {
+            $status = [string]$result.status
+        }
+    } elseif ($resp.PSObject.Properties.Name -contains "status") {
+        $status = [string]$resp.status
+    }
     $ok = $status -eq "healthy"
     Write-Check -Label "RPC node is healthy ($status)" -Passed $ok
     if (-not $ok) { $allPassed = $false }
