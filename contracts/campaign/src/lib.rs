@@ -15,10 +15,18 @@ const MILESTONE_1_YES: Symbol = symbol_short!("M1YES");
 const MILESTONE_2_YES: Symbol = symbol_short!("M2YES");
 const MILESTONE_1_VOTES: Symbol = symbol_short!("M1VOTES");
 const MILESTONE_2_VOTES: Symbol = symbol_short!("M2VOTES");
+const CREATOR_REPUTATION: Symbol = symbol_short!("CRREP");
+const GOAL_REACHED_BONUS_APPLIED: Symbol = symbol_short!("GRBON");
+const SUCCESS_BONUS_APPLIED: Symbol = symbol_short!("SCBON");
 
 const FIRST_TRANCHE_PERCENT: i128 = 30;
 const SECOND_TRANCHE_PERCENT: i128 = 35;
 const APPROVAL_PERCENT: i128 = 50;
+const DEFAULT_REPUTATION_SCORE: i128 = 100;
+const GOAL_REACHED_BONUS: i128 = 2;
+const SUCCESSFUL_CAMPAIGN_BONUS: i128 = 10;
+const FAILED_WITHDRAWAL_PENALTY: i128 = -15;
+const FRAUD_REPORT_PENALTY: i128 = -20;
 
 #[contract]
 pub struct Campaign;
@@ -59,6 +67,11 @@ impl Campaign {
         env.storage().instance().set(&MILESTONE_2_YES, &0_i128);
         env.storage()
             .instance()
+            .set(&CREATOR_REPUTATION, &Map::<Address, i128>::new(&env));
+        env.storage().instance().set(&GOAL_REACHED_BONUS_APPLIED, &false);
+        env.storage().instance().set(&SUCCESS_BONUS_APPLIED, &false);
+        env.storage()
+            .instance()
             .set(&MILESTONE_1_VOTES, &Map::<Address, bool>::new(&env));
         env.storage()
             .instance()
@@ -83,6 +96,12 @@ impl Campaign {
         // Transfer XLM from donor to this contract
         token_client.transfer(&donor, &env.current_contract_address(), &amount_xlm);
 
+        let creator = env
+            .storage()
+            .instance()
+            .get::<_, Address>(&CREATOR)
+            .unwrap();
+
         let mut pledged = env
             .storage()
             .instance()
@@ -90,6 +109,7 @@ impl Campaign {
             .unwrap_or(0);
         pledged += amount_xlm;
         env.storage().instance().set(&TOTAL_PLEDGED, &pledged);
+        maybe_award_goal_reached_bonus(&env, &creator, pledged);
 
         let mut balances = env
             .storage()
@@ -129,6 +149,7 @@ impl Campaign {
             .unwrap_or(0);
         let amount = release_percent(&env, FIRST_TRANCHE_PERCENT, pledged);
         env.storage().instance().set(&FIRST_RELEASED, &true);
+        maybe_award_success_bonus(&env, &creator, amount);
 
         amount
     }
@@ -205,6 +226,7 @@ impl Campaign {
         if !first_released {
             let amount = release_percent(&env, FIRST_TRANCHE_PERCENT, pledged);
             env.storage().instance().set(&FIRST_RELEASED, &true);
+            maybe_award_success_bonus(&env, &creator, amount);
             return amount;
         }
 
@@ -233,6 +255,87 @@ impl Campaign {
         }
 
         panic!("all milestone funds released");
+    }
+
+    pub fn attempt_release_milestone_funds(env: Env) -> i128 {
+        let creator = env
+            .storage()
+            .instance()
+            .get::<_, Address>(&CREATOR)
+            .unwrap();
+        creator.require_auth();
+
+        let deadline_ts = env.storage().instance().get::<_, u64>(&DEADLINE).unwrap();
+        let goal = env.storage().instance().get::<_, i128>(&GOAL).unwrap();
+        let pledged = env
+            .storage()
+            .instance()
+            .get::<_, i128>(&TOTAL_PLEDGED)
+            .unwrap_or(0);
+
+        let first_released = env
+            .storage()
+            .instance()
+            .get::<_, bool>(&FIRST_RELEASED)
+            .unwrap_or(false);
+        let milestone_1_completed = env
+            .storage()
+            .instance()
+            .get::<_, bool>(&MILESTONE_1_COMPLETED)
+            .unwrap_or(false);
+        let milestone_2_completed = env
+            .storage()
+            .instance()
+            .get::<_, bool>(&MILESTONE_2_COMPLETED)
+            .unwrap_or(false);
+
+        let can_release = if env.ledger().timestamp() <= deadline_ts || pledged < goal {
+            false
+        } else if !first_released {
+            true
+        } else if !milestone_1_completed {
+            let yes_votes = env
+                .storage()
+                .instance()
+                .get::<_, i128>(&MILESTONE_1_YES)
+                .unwrap_or(0);
+            yes_votes * 100 >= pledged * APPROVAL_PERCENT
+        } else if !milestone_2_completed {
+            let yes_votes = env
+                .storage()
+                .instance()
+                .get::<_, i128>(&MILESTONE_2_YES)
+                .unwrap_or(0);
+            yes_votes * 100 >= pledged * APPROVAL_PERCENT
+        } else {
+            false
+        };
+
+        if !can_release {
+            apply_creator_reputation_delta(&env, &creator, FAILED_WITHDRAWAL_PENALTY);
+            return 0;
+        }
+
+        if !first_released {
+            let amount = release_percent(&env, FIRST_TRANCHE_PERCENT, pledged);
+            env.storage().instance().set(&FIRST_RELEASED, &true);
+            maybe_award_success_bonus(&env, &creator, amount);
+            return amount;
+        }
+
+        if !milestone_1_completed {
+            let amount = release_percent(&env, SECOND_TRANCHE_PERCENT, pledged);
+            env.storage().instance().set(&MILESTONE_1_COMPLETED, &true);
+            return amount;
+        }
+
+        if !milestone_2_completed {
+            let amount = release_remaining(&env);
+            env.storage().instance().set(&MILESTONE_2_COMPLETED, &true);
+            return amount;
+        }
+
+        0
     }
 
     pub fn refund(env: Env, backer: Address) {
@@ -326,6 +429,86 @@ impl Campaign {
             milestone_1_yes,
             milestone_2_yes,
         )
+    }
+
+    pub fn get_creator_reputation(env: Env, creator: Address) -> i128 {
+        get_creator_reputation_score(&env, &creator)
+    }
+
+    pub fn report_fraud(env: Env, reporter: Address, creator: Address) -> i128 {
+        reporter.require_auth();
+        apply_creator_reputation_delta(&env, &creator, FRAUD_REPORT_PENALTY)
+    }
+
+    pub fn record_failed_withdrawal_attempt(
+        env: Env,
+        reporter: Address,
+        creator: Address,
+    ) -> i128 {
+        reporter.require_auth();
+        apply_creator_reputation_delta(&env, &creator, FAILED_WITHDRAWAL_PENALTY)
+    }
+}
+
+fn get_creator_reputation_score(env: &Env, creator: &Address) -> i128 {
+    let reputation_map = env
+        .storage()
+        .instance()
+        .get::<_, Map<Address, i128>>(&CREATOR_REPUTATION)
+        .unwrap_or(Map::new(env));
+
+    reputation_map
+        .get(creator.clone())
+        .unwrap_or(DEFAULT_REPUTATION_SCORE)
+}
+
+fn set_creator_reputation_score(env: &Env, creator: &Address, score: i128) {
+    let mut reputation_map = env
+        .storage()
+        .instance()
+        .get::<_, Map<Address, i128>>(&CREATOR_REPUTATION)
+        .unwrap_or(Map::new(env));
+
+    reputation_map.set(creator.clone(), score);
+    env.storage().instance().set(&CREATOR_REPUTATION, &reputation_map);
+}
+
+fn apply_creator_reputation_delta(env: &Env, creator: &Address, delta: i128) -> i128 {
+    let next_score = get_creator_reputation_score(env, creator) + delta;
+    set_creator_reputation_score(env, creator, next_score);
+    next_score
+}
+
+fn maybe_award_goal_reached_bonus(env: &Env, creator: &Address, pledged: i128) {
+    let goal = env.storage().instance().get::<_, i128>(&GOAL).unwrap_or(0);
+    let goal_bonus_applied = env
+        .storage()
+        .instance()
+        .get::<_, bool>(&GOAL_REACHED_BONUS_APPLIED)
+        .unwrap_or(false);
+
+    if !goal_bonus_applied && pledged >= goal {
+        apply_creator_reputation_delta(env, creator, GOAL_REACHED_BONUS);
+        env.storage()
+            .instance()
+            .set(&GOAL_REACHED_BONUS_APPLIED, &true);
+    }
+}
+
+fn maybe_award_success_bonus(env: &Env, creator: &Address, released_amount: i128) {
+    if released_amount <= 0 {
+        return;
+    }
+
+    let success_bonus_applied = env
+        .storage()
+        .instance()
+        .get::<_, bool>(&SUCCESS_BONUS_APPLIED)
+        .unwrap_or(false);
+
+    if !success_bonus_applied {
+        apply_creator_reputation_delta(env, creator, SUCCESSFUL_CAMPAIGN_BONUS);
+        env.storage().instance().set(&SUCCESS_BONUS_APPLIED, &true);
     }
 }
 
@@ -462,6 +645,8 @@ mod tests {
         assert_eq!(goal, 1_000_0000000_i128);
         assert_eq!(deadline, 4_600_u64);
         assert_eq!(pledged, 0_i128);
+
+        assert_eq!(client.get_creator_reputation(&creator), 100_i128);
         let _ = env;
     }
 
@@ -513,6 +698,7 @@ mod tests {
         assert_eq!(creator_after - creator_before, 300_0000000_i128);
         let (_c, _g, _d, pledged) = client.get_state();
         assert_eq!(pledged, 1_000_0000000_i128);
+        assert_eq!(client.get_creator_reputation(&creator), 112_i128);
 
         let (first_released, milestone_1_completed, milestone_2_completed, m1_yes, m2_yes) =
             client.get_milestone_state();
@@ -674,5 +860,29 @@ mod tests {
 
         client.vote_milestone(&backer, &1_u32, &true);
         client.vote_milestone(&backer, &1_u32, &true);
+    }
+
+    #[test]
+    fn test_failed_release_attempt_penalizes_creator() {
+        let (env, client, creator, backer, _token) = setup();
+
+        client.pledge(&backer, &100_0000000_i128);
+
+        let released = client.attempt_release_milestone_funds();
+        assert_eq!(released, 0_i128);
+        assert_eq!(client.get_creator_reputation(&creator), 85_i128);
+        let _ = env;
+    }
+
+    #[test]
+    fn test_reputation_manual_penalties_and_reports() {
+        let (env, client, creator, backer, _token) = setup();
+
+        assert_eq!(client.record_failed_withdrawal_attempt(&backer, &creator), 85_i128);
+        assert_eq!(client.report_fraud(&backer, &creator), 65_i128);
+
+        let reputation = client.get_creator_reputation(&creator);
+        assert_eq!(reputation, 65_i128);
+        let _ = env;
     }
 }

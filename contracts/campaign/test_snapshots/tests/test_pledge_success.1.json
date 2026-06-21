@@ -291,6 +291,14 @@
                       },
                       {
                         "key": {
+                          "symbol": "CRREP"
+                        },
+                        "val": {
+                          "map": []
+                        }
+                      },
+                      {
+                        "key": {
                           "symbol": "DDLN"
                         },
                         "val": {
@@ -306,6 +314,14 @@
                             "hi": 0,
                             "lo": 10000000000
                           }
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "GRBON"
+                        },
+                        "val": {
+                          "bool": false
                         }
                       },
                       {
@@ -371,6 +387,14 @@
                             "hi": 0,
                             "lo": 5000000000
                           }
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "SCBON"
+                        },
+                        "val": {
+                          "bool": false
                         }
                       },
                       {

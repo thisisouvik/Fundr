@@ -20,11 +20,14 @@ export function WithdrawButton({ contractId, deadline }: WithdrawButtonProps) {
     try {
       const contract = new Contract(contractId);
 
-      const { hash } = await submitTransaction({
-        buildOperations: () => [contract.call("release_milestone_funds")],
+      const { hash, result } = await submitTransaction({
+        buildOperations: () => [contract.call("attempt_release_milestone_funds")],
       });
 
       setTxHash(hash);
+      if (Number(result ?? 0) === 0) {
+        alert("Milestone release failed, and the creator reputation was penalized on-chain.");
+      }
     } catch (err: any) {
       console.error(err);
       alert("Milestone release failed: " + (err.message || "Unknown error"));

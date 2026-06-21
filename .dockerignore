@@ -2,6 +2,11 @@
 .github
 .next
 node_modules
+contracts/target
+contracts/test_snapshots
+tests
+sql
+assets
 playwright-report
 test-results
 tsconfig.tsbuildinfo
