@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { isConnected, isAllowed, getAddress, signTransaction } from "@stellar/freighter-api";
 import { rpc, TransactionBuilder, Transaction, xdr } from "@stellar/stellar-sdk";
 import { getRpcServer, getNetworkPassphrase, waitForSorobanTx } from "@/lib/stellar/soroban";
+import { scValToNative } from "@stellar/stellar-sdk";
 
 interface SubmitTransactionArgs {
   buildOperations: (walletAddress: string) => xdr.Operation[] | Promise<xdr.Operation[]>;
@@ -55,6 +56,7 @@ export function useSorobanIntegration() {
         throw new Error("Simulation failed. " + (typeof sim.error === "string" ? sim.error : ""));
       }
 
+      const simulatedReturn = sim.result?.retval ? scValToNative(sim.result.retval) : undefined;
       const prepared = rpc.assembleTransaction(tx, sim).build();
       const signedXdr = await signTransaction(prepared.toXDR(), { networkPassphrase });
       
@@ -72,7 +74,7 @@ export function useSorobanIntegration() {
       const hash = send.hash;
       await waitForSorobanTx(server, hash);
 
-      return { hash, walletAddress };
+      return { hash, walletAddress, result: simulatedReturn };
     } finally {
       setIsSubmitting(false);
     }
