@@ -77,7 +77,7 @@ By leveraging **Stellar's Soroban Smart Contracts**, Fundr ensures that backers'
 
 | Category | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Frontend Framework** | Next.js 14 (App Router) | React framework for SSR and optimized routing |
+| **Frontend Framework** | Next.js 16 (App Router) | React framework for SSR and optimized routing |
 | **Styling** | Tailwind CSS & Vanilla CSS | Modern, responsive, and highly-customizable UI |
 | **Backend & Auth** | Supabase | PostgreSQL database, Auth, RLS Policies, and Storage |
 | **Smart Contracts** | Rust (Soroban) | Writing secure, fast, and lightweight blockchain logic |
@@ -95,32 +95,34 @@ The platform utilizes a Factory pattern to dynamically spawn isolated escrow con
 | Item | Value |
 | :--- | :--- |
 | **Network** | Stellar Testnet |
-| **Crowdfund Factory Contract ID** | `CCS6ECPIBP73QZNWWTE3BSMVJOVUTTG2VT5WDLBO3PNYI4BUTHQEKP7J` |
-| **Campaign WASM Hash** | `0ceeeab6ecc69acb0018b49896f66b3a3c36ee6eba7a8b0d76b860b3d7932e75` |
-| **Factory Deploy Transaction** | `849922114536ac6b83173f297a0219b611bc1fe304ef98888f3c47bd968ce41b` |
+| **Crowdfund Factory Contract ID** | `CAI4SPNXPJ46PCA2DWRIZ44EP2ZCIETYF7O2JY5JNGOHB6WINPLDFEOM` |
+| **Campaign WASM Hash** | `38bcf17dbd42d8f8175e667e2b186fa399af6276b7b76dec69527d82a5c0e03e` |
 | **Deployer Wallet** | `GDRHEIIOD4PZ4CQEZN5QLMZTVA5QEZWX2OBSQMVSFLYICDJH3FXLKX3Y` |
 
 Verification links:
 
-*   [Verify latest factory contract on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CCS6ECPIBP73QZNWWTE3BSMVJOVUTTG2VT5WDLBO3PNYI4BUTHQEKP7J)
-*   [Verify deployment transaction on Stellar Expert](https://stellar.expert/explorer/testnet/tx/849922114536ac6b83173f297a0219b611bc1fe304ef98888f3c47bd968ce41b)
+*   [Verify latest factory contract on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAI4SPNXPJ46PCA2DWRIZ44EP2ZCIETYF7O2JY5JNGOHB6WINPLDFEOM)
 
 Latest campaign WASM exported functions:
 
 ```text
+attempt_release_milestone_funds
 get_milestone_state
+get_creator_reputation
 get_state
 init
 pledge
+record_failed_withdrawal_attempt
 refund
 release_milestone_funds
+report_fraud
 vote_milestone
 withdraw
 ```
 
-Important deployment note: existing campaign contracts already deployed before this upgrade still use their original on-chain logic. New campaigns created through the latest factory use the milestone-based campaign WASM above.
+Important deployment note: existing campaign contracts already deployed before this upgrade still use their original on-chain logic. New campaigns created through the latest factory use the milestone-based campaign WASM above, including on-chain creator reputation updates.
 
-Health check note: the deployment completed successfully and the contract-live, `get_campaign`, `create_campaign` ABI, and Horizon checks passed. One RPC reachability probe returned a response-shape parsing warning in the local health-check script.
+Health check note: the deployment completed successfully and the contract-live, `get_campaign`, `create_campaign` ABI, RPC health, and Horizon checks all passed.
 
 ---
 
@@ -129,6 +131,7 @@ Health check note: the deployment completed successfully and the contract-live, 
 The latest update replaces the old full-withdrawal model with milestone-based fund release:
 
 *   `withdraw()` now releases only the first 30% tranche after a successful campaign.
+*   `attempt_release_milestone_funds()` lets the creator attempt releases via dashboard flow; failed attempts return `0` and apply the on-chain `-15` reputation penalty.
 *   `vote_milestone(backer, milestone, approve)` lets backers approve or reject milestone 1 and milestone 2.
 *   `release_milestone_funds()` releases the next eligible tranche:
     *   first call releases 30%;
@@ -136,6 +139,7 @@ The latest update replaces the old full-withdrawal model with milestone-based fu
     *   after milestone 2 approval, the final call releases the remaining 35%.
 *   `milestone_1_completed` and `milestone_2_completed` are stored on-chain.
 *   `get_milestone_state()` exposes milestone completion and yes-vote totals.
+*   `get_creator_reputation()` exposes the on-chain reputation score used by the campaign page.
 *   The creator dashboard now shows "Release Next Tranche" instead of full withdrawal.
 *   Public campaign pages now include milestone voting controls for ended, fully funded campaigns.
 
@@ -143,12 +147,16 @@ Verification completed after this update:
 
 ```bash
 npm run lint
+npm run test:e2e
+npx tsc --noEmit
 npm run build
-cargo test -p campaign
 npm run deploy:stellar
+cargo test --all
+cargo clippy --target wasm32-unknown-unknown --release --lib -- -D warnings
+docker compose config
 ```
 
-Result: frontend lint passed, production build passed, campaign contract tests passed (`13 passed`), and the latest milestone contract WASM was deployed to Stellar Testnet.
+Result: frontend lint passed, TypeScript typecheck passed, Playwright E2E completed (all 4 tests skipped in the local environment), production build passed, contract tests passed (`15 passed`), clippy passed, Docker Compose config parsed successfully, and the latest milestone contract WASM was redeployed to Stellar Testnet.
 
 ---
 
@@ -174,9 +182,12 @@ Fundr/
 ├── hooks/                    # Custom React Hooks
 │   └── useSorobanIntegration.ts # Modularized Freighter and smart contract integration logic
 ├── lib/                      # Utilities and Integrations
-│   └── stellar/              # Soroban SDK, Freighter wallet, and RPC wrappers
+│   ├── stellar/              # Soroban SDK, Freighter wallet, and RPC wrappers
+│   │   └── reputation.ts     # Server-side on-chain creator reputation reader
+│   └── supabase/             # Supabase client/server/middleware utilities
 ├── sql/                      # Supabase Database Migrations & RLS Policies
-├── scripts/                  # Deployment & E2E Testing scripts
+├── scripts/                  # Deployment, health checks, and E2E scripts
+│   └── stellar/              # Contract deploy and health-check scripts
 └── types/                    # TypeScript interfaces & Supabase DB Types
 ```
 
@@ -200,13 +211,15 @@ graph TD;
     J --> K["Campaign is Live"];
     
     K --> L{Deadline Reached?};
-    L -->|Goal Met| M["Creator Releases First 30% Tranche"];
-    M --> O["Creator Submits Milestone Proof"];
+    L -->|Goal Met| M["Creator Attempts Release"];
+    M -->|Valid State| N1["30% First Tranche Released"];
+    M -->|Invalid State| N2["Release Fails + Reputation -15"];
+    N1 --> O["Creator Submits Milestone Proof"];
     O --> P["Backers Vote on Milestone"];
     P -->|Approved| Q["Next 35% Released"];
     Q --> R["Final Milestone Vote"];
     R -->|Approved| S["Remaining 35% Released"];
-    L -->|Goal Failed| N["Backers Refunded"];
+    L -->|Goal Failed| T["Backers Refunded"];
 ```
 
 ### Smart Contract Architecture
@@ -215,9 +228,10 @@ graph LR;
     A["Web Client"] -->|Calls Factory| B["CrowdfundFactory Contract"];
     B -->|deploy_v2| C["Campaign Contract (Instance)"];
     A -->|"Calls pledge()"| C;
-    A -->|"Calls withdraw() for first 30%"| C;
+  A -->|"Calls attempt_release_milestone_funds()"| C;
     A -->|"Calls vote_milestone()"| C;
     A -->|"Calls release_milestone_funds()"| C;
+  A -->|"Calls get_creator_reputation()"| C;
     A -->|"Calls refund()"| C;
 ```
 
@@ -271,6 +285,25 @@ If you are sharing the project, commit only `.env.example`, not `.env.local` or 
 
 ---
 
+## ⭐ Creator Reputation
+
+Fundr now stores creator reputation on-chain in the campaign contract.
+
+Formula:
+
+```text
++10 Successful Campaign
++2 Goal Reached
+-15 Failed Withdrawal Attempt
+-20 Fraud Report
+```
+
+The public campaign page shows the current score and a trusted badge when the on-chain score is strong enough.
+
+Failed creator release attempts now apply the `-15` penalty on-chain through the creator dashboard's release action.
+
+---
+
 ## 🚨 Error Handling
 
 | Scenario | Handled By | User Feedback |
@@ -313,18 +346,14 @@ The platform's critical functionality is thoroughly tested via automated Node E2
 ### 2. Smart Contract Deployment
 To build and deploy the contracts locally to Testnet:
 ```bash
-# Compile contracts
-soroban contract build
-
-# Run deployment script
-node scripts/deploy-contracts.mjs
+npm run deploy:stellar
 ```
-*Note: Make sure to update your `.env.local` with the new Contract IDs.*
+*Note: The deploy script updates `.env.local` with the new factory contract ID and validates the deployment health checks.*
 
 ### 3. Frontend Setup
 1. Clone the repository and install dependencies:
    ```bash
-   npm install
+  npm ci
    ```
 2. Create a `.env.local` file based on `.env.example` and fill in your Supabase and Stellar credentials.
 3. Start the development server:
