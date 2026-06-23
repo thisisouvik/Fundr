@@ -435,6 +435,17 @@
                       },
                       {
                         "key": {
+                          "symbol": "TOPAM"
+                        },
+                        "val": {
+                          "i128": {
+                            "hi": 0,
+                            "lo": 0
+                          }
+                        }
+                      },
+                      {
+                        "key": {
                           "symbol": "TR1REL"
                         },
                         "val": {

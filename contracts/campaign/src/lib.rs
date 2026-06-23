@@ -8,6 +8,9 @@ const GOAL: Symbol = symbol_short!("GOAL");
 const DEADLINE: Symbol = symbol_short!("DDLN");
 const TOTAL_PLEDGED: Symbol = symbol_short!("PLEDGED");
 const BALANCES: Symbol = symbol_short!("BALS");
+const FIRST_BACKER: Symbol = symbol_short!("FBRKR");
+const TOP_SUPPORTER: Symbol = symbol_short!("TOPSP");
+const TOP_SUPPORTER_AMOUNT: Symbol = symbol_short!("TOPAM");
 const FIRST_RELEASED: Symbol = symbol_short!("TR1REL");
 const MILESTONE_1_COMPLETED: Symbol = symbol_short!("M1DONE");
 const MILESTONE_2_COMPLETED: Symbol = symbol_short!("M2DONE");
@@ -60,6 +63,9 @@ impl Campaign {
         env.storage()
             .instance()
             .set(&BALANCES, &Map::<Address, i128>::new(&env));
+        env.storage().instance().remove(&FIRST_BACKER);
+        env.storage().instance().remove(&TOP_SUPPORTER);
+        env.storage().instance().set(&TOP_SUPPORTER_AMOUNT, &0_i128);
         env.storage().instance().set(&FIRST_RELEASED, &false);
         env.storage().instance().set(&MILESTONE_1_COMPLETED, &false);
         env.storage().instance().set(&MILESTONE_2_COMPLETED, &false);
@@ -119,6 +125,23 @@ impl Campaign {
         let current_balance = balances.get(donor.clone()).unwrap_or(0);
         balances.set(donor.clone(), current_balance + amount_xlm);
         env.storage().instance().set(&BALANCES, &balances);
+
+        if !env.storage().instance().has(&FIRST_BACKER) {
+            env.storage().instance().set(&FIRST_BACKER, &donor);
+        }
+
+        let next_supporter_total = current_balance + amount_xlm;
+        let top_supporter_amount = env
+            .storage()
+            .instance()
+            .get::<_, i128>(&TOP_SUPPORTER_AMOUNT)
+            .unwrap_or(0);
+        if next_supporter_total > top_supporter_amount {
+            env.storage().instance().set(&TOP_SUPPORTER, &donor);
+            env.storage()
+                .instance()
+                .set(&TOP_SUPPORTER_AMOUNT, &next_supporter_total);
+        }
 
         pledged
     }
@@ -395,6 +418,38 @@ impl Campaign {
         (creator, goal, deadline, pledged)
     }
 
+    pub fn get_achievement_snapshot(env: Env) -> (Option<Address>, i128, Option<Address>, i128, i128) {
+        let balances = env
+            .storage()
+            .instance()
+            .get::<_, Map<Address, i128>>(&BALANCES)
+            .unwrap_or(Map::new(&env));
+        let first_backer = env.storage().instance().get::<_, Address>(&FIRST_BACKER);
+        let first_backer_amount = first_backer
+            .clone()
+            .map(|address| balances.get(address).unwrap_or(0))
+            .unwrap_or(0);
+        let top_supporter = env.storage().instance().get::<_, Address>(&TOP_SUPPORTER);
+        let top_supporter_amount = env
+            .storage()
+            .instance()
+            .get::<_, i128>(&TOP_SUPPORTER_AMOUNT)
+            .unwrap_or(0);
+        let pledged = env
+            .storage()
+            .instance()
+            .get::<_, i128>(&TOTAL_PLEDGED)
+            .unwrap_or(0);
+
+        (
+            first_backer,
+            first_backer_amount,
+            top_supporter,
+            top_supporter_amount,
+            pledged,
+        )
+    }
+
     pub fn get_milestone_state(env: Env) -> (bool, bool, bool, i128, i128) {
         let first_released = env
             .storage()
@@ -662,6 +717,13 @@ mod tests {
 
         let (_c, _g, _d, pledged) = client.get_state();
         assert_eq!(pledged, 500_0000000_i128);
+        let (first_backer, first_backer_amount, top_supporter, top_supporter_amount, total_pledged) =
+            client.get_achievement_snapshot();
+        assert_eq!(first_backer, Some(backer.clone()));
+        assert_eq!(first_backer_amount, 500_0000000_i128);
+        assert_eq!(top_supporter, Some(backer.clone()));
+        assert_eq!(top_supporter_amount, 500_0000000_i128);
+        assert_eq!(total_pledged, 500_0000000_i128);
         let _ = env;
     }
 
