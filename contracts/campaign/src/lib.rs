@@ -11,6 +11,7 @@ const BALANCES: Symbol = symbol_short!("BALS");
 const FIRST_BACKER: Symbol = symbol_short!("FBRKR");
 const TOP_SUPPORTER: Symbol = symbol_short!("TOPSP");
 const TOP_SUPPORTER_AMOUNT: Symbol = symbol_short!("TOPAM");
+const VERIFIED_CREATOR: Symbol = symbol_short!("VCRTR");
 const FIRST_RELEASED: Symbol = symbol_short!("TR1REL");
 const MILESTONE_1_COMPLETED: Symbol = symbol_short!("M1DONE");
 const MILESTONE_2_COMPLETED: Symbol = symbol_short!("M2DONE");
@@ -42,6 +43,7 @@ impl Campaign {
         token_address: Address,
         goal_xlm: i128,
         deadline_ts: u64,
+        verified_creator: bool,
     ) {
         if env.storage().instance().has(&CREATOR) {
             panic!("already initialized");
@@ -66,6 +68,7 @@ impl Campaign {
         env.storage().instance().remove(&FIRST_BACKER);
         env.storage().instance().remove(&TOP_SUPPORTER);
         env.storage().instance().set(&TOP_SUPPORTER_AMOUNT, &0_i128);
+        env.storage().instance().set(&VERIFIED_CREATOR, &verified_creator);
         env.storage().instance().set(&FIRST_RELEASED, &false);
         env.storage().instance().set(&MILESTONE_1_COMPLETED, &false);
         env.storage().instance().set(&MILESTONE_2_COMPLETED, &false);
@@ -418,7 +421,9 @@ impl Campaign {
         (creator, goal, deadline, pledged)
     }
 
-    pub fn get_achievement_snapshot(env: Env) -> (Option<Address>, i128, Option<Address>, i128, i128) {
+    pub fn get_achievement_snapshot(
+        env: Env,
+    ) -> (Option<Address>, i128, Option<Address>, i128, i128, bool) {
         let balances = env
             .storage()
             .instance()
@@ -440,6 +445,11 @@ impl Campaign {
             .instance()
             .get::<_, i128>(&TOTAL_PLEDGED)
             .unwrap_or(0);
+        let verified_creator = env
+            .storage()
+            .instance()
+            .get::<_, bool>(&VERIFIED_CREATOR)
+            .unwrap_or(false);
 
         (
             first_backer,
@@ -447,6 +457,7 @@ impl Campaign {
             top_supporter,
             top_supporter_amount,
             pledged,
+            verified_creator,
         )
     }
 
@@ -685,7 +696,7 @@ mod tests {
         env.ledger().with_mut(|l| l.timestamp = 1_000);
 
         // Deadline = now + 3 600 (1 hour ahead)
-        client.init(&creator, &token_addr, &1_000_0000000_i128, &4_600);
+        client.init(&creator, &token_addr, &1_000_0000000_i128, &4_600, &true);
 
         (env, client, creator, backer, token_addr)
     }
@@ -717,13 +728,14 @@ mod tests {
 
         let (_c, _g, _d, pledged) = client.get_state();
         assert_eq!(pledged, 500_0000000_i128);
-        let (first_backer, first_backer_amount, top_supporter, top_supporter_amount, total_pledged) =
+        let (first_backer, first_backer_amount, top_supporter, top_supporter_amount, total_pledged, verified_creator) =
             client.get_achievement_snapshot();
         assert_eq!(first_backer, Some(backer.clone()));
         assert_eq!(first_backer_amount, 500_0000000_i128);
         assert_eq!(top_supporter, Some(backer.clone()));
         assert_eq!(top_supporter_amount, 500_0000000_i128);
         assert_eq!(total_pledged, 500_0000000_i128);
+        assert!(verified_creator);
         let _ = env;
     }
 
@@ -837,7 +849,7 @@ mod tests {
     fn test_double_init_panics() {
         let (env, client, creator, _backer, token_addr) = setup();
         // Re-initialise same contract
-        client.init(&creator, &token_addr, &500_0000000_i128, &9_000);
+        client.init(&creator, &token_addr, &500_0000000_i128, &9_000, &true);
         let _ = env;
     }
 
@@ -863,7 +875,7 @@ mod tests {
         let campaign_id = env.register(Campaign, ());
         let client = CampaignClient::new(&env, &campaign_id);
 
-        client.init(&creator, &token_addr, &0_i128, &4_600);
+        client.init(&creator, &token_addr, &0_i128, &4_600, &false);
     }
 
     #[test]

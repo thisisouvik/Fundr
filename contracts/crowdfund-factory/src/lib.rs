@@ -24,6 +24,7 @@ impl CrowdfundFactory {
         token_address: Address,
         goal_xlm: i128,
         deadline_ts: u64,
+        verified_creator: bool,
     ) -> Address {
         // creator.require_auth() is removed because the platform backend
         // submits and signs this transaction on behalf of the user.
@@ -51,7 +52,7 @@ impl CrowdfundFactory {
         env.invoke_contract::<()>(
             &campaign_id,
             &symbol_short!("init"),
-            (creator.clone(), token_address, goal_xlm, deadline_ts).into_val(&env),
+            (creator.clone(), token_address, goal_xlm, deadline_ts, verified_creator).into_val(&env),
         );
 
         let mut campaigns = env

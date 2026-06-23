@@ -503,6 +503,14 @@
                         "val": {
                           "bool": true
                         }
+                      },
+                      {
+                        "key": {
+                          "symbol": "VCRTR"
+                        },
+                        "val": {
+                          "bool": true
+                        }
                       }
                     ]
                   }
