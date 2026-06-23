@@ -29,6 +29,7 @@ export interface CreateOnChainCampaignInput {
   goalXlm: number;
   deadlineIso: string;
   title: string;
+  verifiedCreator: boolean;
 }
 
 export interface OnChainCampaignResult {
@@ -81,6 +82,7 @@ async function invokeFactoryCreate(
     deadlineTs,
     now:        Math.floor(Date.now() / 1000),
     deltaS:     deadlineTs - Math.floor(Date.now() / 1000),
+    verifiedCreator: input.verifiedCreator,
   });
 
   const buildTx = (acct: typeof sourceAccount) =>
@@ -95,6 +97,7 @@ async function invokeFactoryCreate(
           ).toScVal(),
           nativeToScVal(goalStroops, { type: "i128" }),
           nativeToScVal(deadlineTs,  { type: "u64"  }),
+          nativeToScVal(input.verifiedCreator, { type: "bool" }),
         ),
       )
       .setTimeout(300)
