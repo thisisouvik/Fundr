@@ -10,6 +10,8 @@ import { RecentDonors } from "@/components/campaigns/RecentDonors";
 import { CommentsSection } from "@/components/campaigns/CommentsSection";
 import { MilestoneVotePanel } from "@/components/campaigns/MilestoneVotePanel";
 import { VerifyOnChain } from "@/components/ui/VerifyOnChain";
+import { getCampaignAchievementSnapshot } from "@/lib/stellar/achievement-badges";
+import { AchievementBadges } from "@/components/campaigns/AchievementBadges";
 import { getCreatorReputation } from "@/lib/stellar/reputation";
 
 
@@ -41,12 +43,16 @@ export default async function CampaignDetailPage({
   // Fetch creator profile
   const { data: creator } = await supabase
     .from("profiles")
-    .select("full_name, username, avatar_url, wallet_address")
+    .select("full_name, username, avatar_url, wallet_address, is_verified")
     .eq("id", campaign.creator_id)
     .maybeSingle();
 
   const reputation = creator?.wallet_address && campaign.contract_address
     ? await getCreatorReputation(campaign.contract_address, creator.wallet_address)
+    : null;
+
+  const achievementSnapshot = creator?.wallet_address && campaign.contract_address
+    ? await getCampaignAchievementSnapshot(campaign.contract_address, creator.wallet_address)
     : null;
 
   // Fetch contributions for progress
@@ -67,6 +73,70 @@ export default async function CampaignDetailPage({
     (new Date(campaign.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
   );
   const canVoteOnMilestones = Boolean(campaign.contract_address) && progress >= 100 && daysLeft <= 0;
+  const goalXlm = Number(campaign.goal_xlm);
+  const communityHeroEarned = Boolean(reputation?.displayScore && reputation.displayScore >= 110);
+
+  function formatShortAddress(address: string | null | undefined) {
+    if (!address) {
+      return "Pending";
+    }
+
+    return `${address.slice(0, 5)}...${address.slice(-5)}`;
+  }
+
+  const achievementBadges = [
+    {
+      id: "first-backer",
+      label: "First Backer",
+      description: achievementSnapshot?.firstBacker
+        ? `${formatShortAddress(achievementSnapshot.firstBacker)} backed the campaign first with ${achievementSnapshot.firstBackerAmountXlm.toFixed(2)} XLM.`
+        : "Waiting for the first confirmed pledge to unlock this badge.",
+      earned: Boolean(achievementSnapshot?.firstBacker),
+    },
+    {
+      id: "top-supporter",
+      label: "Top Supporter",
+      description: achievementSnapshot?.topSupporter
+        ? `${formatShortAddress(achievementSnapshot.topSupporter)} currently leads with ${achievementSnapshot.topSupporterAmountXlm.toFixed(2)} XLM.`
+        : "The largest supporter will be tracked automatically on-chain.",
+      earned: Boolean(achievementSnapshot?.topSupporter),
+    },
+    {
+      id: "whale-investor",
+      label: "Whale Investor",
+      description: achievementSnapshot?.topSupporterAmountXlm
+        ? `Triggered when one supporter contributes at least ${Math.max(100, Math.round(goalXlm * 0.25))} XLM.`
+        : "Reserved for a standout pledge that meaningfully moves the campaign.",
+      earned: Boolean(
+        achievementSnapshot?.topSupporterAmountXlm &&
+          achievementSnapshot.topSupporterAmountXlm >= Math.max(100, goalXlm * 0.25),
+      ),
+    },
+    {
+      id: "community-hero",
+      label: "Community Hero",
+      description: reputation
+        ? `On-chain creator reputation sits at ${reputation.displayScore}/100.`
+        : "Creator reputation will surface here once the campaign contract is readable.",
+      earned: communityHeroEarned,
+    },
+    {
+      id: "verified-creator",
+      label: "Verified Creator",
+      description: achievementSnapshot?.verifiedCreator
+        ? "This creator was stamped verified when the campaign contract was created."
+        : "Admin-approved verification unlocks this creator badge on-chain.",
+      earned: Boolean(achievementSnapshot?.verifiedCreator),
+    },
+    {
+      id: "1000-raised",
+      label: "1000 XLM Raised",
+      description: achievementSnapshot?.totalPledgedXlm
+        ? `Campaign has raised ${achievementSnapshot.totalPledgedXlm.toFixed(2)} XLM on-chain so far.`
+        : "This badge lights up once the campaign reaches the 1000 XLM milestone.",
+      earned: Boolean(achievementSnapshot?.totalPledgedXlm && achievementSnapshot.totalPledgedXlm >= 1000),
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -132,6 +202,8 @@ export default async function CampaignDetailPage({
                 ) : null}
               </div>
             </div>
+
+            <AchievementBadges badges={achievementBadges} />
 
             {/* Full Description */}
             <div className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">

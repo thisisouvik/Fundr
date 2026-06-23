@@ -68,6 +68,7 @@ async function createDraftCampaign(formData: FormData) {
   const isAdmin = profile?.role === "admin";
   const isCreator = profile?.role === "creator" || isAdmin;
   const hasApprovedKyc = kyc?.status === "approved";
+  const verifiedCreator = Boolean(isAdmin || hasApprovedKyc);
 
   if (!isCreator || (!isAdmin && !hasApprovedKyc)) {
     redirect("/dashboard");
@@ -205,6 +206,7 @@ async function createDraftCampaign(formData: FormData) {
       goalXlm: goal,
       deadlineIso,
       title,
+      verifiedCreator,
     });
   } catch (err: any) {
     console.error("[Fundr] on-chain campaign creation failed:", err);
