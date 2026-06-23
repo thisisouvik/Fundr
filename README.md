@@ -95,13 +95,13 @@ The platform utilizes a Factory pattern to dynamically spawn isolated escrow con
 | Item | Value |
 | :--- | :--- |
 | **Network** | Stellar Testnet |
-| **Crowdfund Factory Contract ID** | `CAI4SPNXPJ46PCA2DWRIZ44EP2ZCIETYF7O2JY5JNGOHB6WINPLDFEOM` |
-| **Campaign WASM Hash** | `38bcf17dbd42d8f8175e667e2b186fa399af6276b7b76dec69527d82a5c0e03e` |
+| **Crowdfund Factory Contract ID** | `CDG7F5LOLHGA3OCFQNYGBUSCJ7UC22JSSKPX5PM752TJ2BTTBVRGY27E` |
+| **Campaign WASM Hash** | `b763f64a39de18f9ff3a90e454dc5aed2a9c00ab289558ec62598a89e7a3d02b` |
 | **Deployer Wallet** | `GDRHEIIOD4PZ4CQEZN5QLMZTVA5QEZWX2OBSQMVSFLYICDJH3FXLKX3Y` |
 
 Verification links:
 
-*   [Verify latest factory contract on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CAI4SPNXPJ46PCA2DWRIZ44EP2ZCIETYF7O2JY5JNGOHB6WINPLDFEOM)
+*   [Verify latest factory contract on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CDG7F5LOLHGA3OCFQNYGBUSCJ7UC22JSSKPX5PM752TJ2BTTBVRGY27E)
 
 Latest campaign WASM exported functions:
 
